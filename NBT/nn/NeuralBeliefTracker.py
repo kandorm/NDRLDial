@@ -12,7 +12,7 @@ def NeuralBeliefTracker(vector_dimension, label_count,
     """
     This method defines the model and returns the required TensorFlow operations.
 
-    slot_vectors, value_vectors should be of size [label_count + 2, 300].
+    slot_vectors, value_vectors should be of size [label_count + 2, 300].   # +2 for none and dontcare
     For None, we should just pass zero vectors for both.
 
     Then, replicate using these vectors the old NBT and then combine each value's (including NONE) into softmax.
@@ -32,12 +32,12 @@ def NeuralBeliefTracker(vector_dimension, label_count,
     these variables, then at test time, just load them (as session even), and then initialise all of the models with them.
     """
     if use_softmax:
-        label_size = label_count + 1
+        label_size = label_count + 1    # None
     else:
         label_size = label_count
 
     # these are actual NN hyperparameters that we might want to tune at some point
-    hidden_units_1 = 40
+    hidden_units_1 = 100
     print "Hidden layer size:", hidden_units_1, "Label Size:", label_size, "Use Softmax:", use_softmax, "Use Delex Features:", use_delex_features
 
     utterance_representations_full  = tf.placeholder(tf.float32, [None, longest_utterance_length, vector_dimension]) # full feature vector, which we want to convolve over
@@ -142,7 +142,7 @@ def NeuralBeliefTracker(vector_dimension, label_count,
     # ================  NETWORK FOR CONFIRMATIONS  ====================
 
     # here, we want to tie across all values, as it will get a different signal depending on whether both things match.
-    confirm_w1_hidden_layer = tf.Variable(tf.random_normal([vector_dimension, hidden_units_1]))
+    confirm_w1_hidden_layer = tf.Variable(tf.random_normal([num_filters, hidden_units_1]))
     confirm_b1_hidden_layer = tf.Variable(tf.zeros([hidden_units_1]))
 
     confirm_w1_softmax = tf.Variable(tf.random_normal([hidden_units_1, 1]))
@@ -243,7 +243,7 @@ def NeuralBeliefTracker(vector_dimension, label_count,
 
     # ======================== LOSS IS JUST CROSS ENTROPY ==========================================
     if use_softmax:
-        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=y_combine, labels=y_)
+        cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(logits=y_combine, labels=y_)
     else:
         cross_entropy = tf.reduce_sum(tf.square(y - y_))
 
@@ -256,13 +256,13 @@ def NeuralBeliefTracker(vector_dimension, label_count,
 
         accuracy = tf.reduce_mean(correct_prediction)
         # this will count number of positives - they are marked with 1 in true_predictions
-        num_positives = tf.reduce_sum(true_predictions)
+        num_positives = tf.reduce_sum(true_predictions)     # TP + FN
         # positives are indicated with ones.
-        classified_positives = tf.reduce_sum(predictions)
+        classified_positives = tf.reduce_sum(predictions)   # TP + FP
         # will have ones in all places where both are predicting positives
         true_positives = tf.multiply(predictions, true_predictions)
         # if indicators for positive of both are 1, then it is positive.
-        num_true_positives = tf.reduce_sum(true_positives)
+        num_true_positives = tf.reduce_sum(true_positives)  # TP
 
         recall = num_true_positives / num_positives
         precision = num_true_positives / classified_positives

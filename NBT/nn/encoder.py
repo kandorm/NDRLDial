@@ -8,6 +8,7 @@ def CNNEncoder(utterance_representations_full, num_filters=300, vector_dimension
     filter_sizes = [1, 2, 3]
     hidden_representation = tf.zeros([num_filters], tf.float32)
 
+    pooled_outputs = []
     for i, filter_size in enumerate(filter_sizes):
         # Convolution Layer
         filter_shape = [filter_size, vector_dimension, 1, num_filters]
@@ -26,6 +27,7 @@ def CNNEncoder(utterance_representations_full, num_filters=300, vector_dimension
             ksize=[1, longest_utterance_length - filter_size + 1, 1, 1],
             strides=[1, 1, 1, 1],
             padding='VALID')
+        pooled_outputs.append(pooled)
         hidden_representation += tf.reshape(tf.concat(pooled, 3), [-1, num_filters])
 
     return hidden_representation

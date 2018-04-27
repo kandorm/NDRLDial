@@ -73,7 +73,7 @@ class DataReader(object):
                 value = unicode(value)
                 if u" " not in value and value not in self.word_vectors:
                     self.word_vectors[value] = xavier_vector(value)
-                    print "-- Generating word vector for:", \
+                    print "  ---Generating word vector for:", \
                         value.encode("utf-8"), ":::", numpy.sum(self.word_vectors[value])
 
         # add up multi-word word values to get their representation:
@@ -97,26 +97,6 @@ class DataReader(object):
                         if word in self.word_vectors:
                             self.word_vectors[value] += self.word_vectors[word]
 
-    def _normalize_transcription(self, transcription):
-        """
-        Returns the clean (i.e. handling interpunction signs) string for the given language.
-        """
-        exclude = set(string.punctuation)
-        exclude.remove("'")
-
-        transcription = ''.join(ch for ch in transcription if ch not in exclude)
-
-        transcription = transcription.lower()
-        transcription = transcription.replace(u"’", "'")
-        transcription = transcription.replace(u"‘", "'")
-        transcription = transcription.replace("don't", "dont")
-        if self.language == "italian":
-            transcription = transcription.replace("'", " ")
-        if self.language == "english":
-            transcription = transcription.replace("'", "")
-
-        return transcription
-
     def _normalize_dial(self, dial):
         """
         Returns a list of (tuple, belief_state) for each turn in the dialogue.
@@ -125,7 +105,8 @@ class DataReader(object):
                         cur_sysconf_slot,   # current system confirm slot
                         cur_sysconf_value,  # current system confirm value
                         cur_bs,             # current belief state
-                        prev_bs)            # previous belief state
+                        prev_bs,            # previous belief state
+                        turn_label)         # turn label
         """
         dialogue_representation = []
 
@@ -156,7 +137,6 @@ class DataReader(object):
             informable_slots = ["essen", "preisklasse", "gegend"]
             pure_requestables = ["postleitzahl", "telefon", "adresse"]
 
-        # TODO:: Using 'belief_state' part of data instead of this.
         prev_belief_state = deepcopy(null_bs)
 
         for idx, turn in enumerate(dial):
@@ -181,10 +161,11 @@ class DataReader(object):
                 cur_sysconf_slot = [""]
                 cur_sysconf_value = [""]
 
-            cur_transcription = self._normalize_transcription(turn["transcript"])
-            cur_asr = [(self._normalize_transcription(hyp), score) for (hyp, score) in turn["asr"]]
+            cur_transcription = normalize_transcription(turn["transcript"], self.language)
+            cur_asr = [(normalize_transcription(hyp, self.language), score) for (hyp, score) in turn["asr"]]
             cur_labels = turn["turn_label"]
             cur_bs = deepcopy(prev_belief_state)
+            turn_bs = deepcopy(null_bs)
 
             # reset requestables at each turn
             if "request" in prev_belief_state:
@@ -195,8 +176,10 @@ class DataReader(object):
                 c_slot, c_value = label
                 if c_slot in informable_slots:
                     cur_bs[c_slot] = c_value
+                    turn_bs[c_slot] = c_value
                 elif c_slot == "request":
                     cur_bs["request"].append(c_value)
+                    turn_bs["request"].append(c_value)
 
             dialogue_representation.append((
                 (cur_transcription, cur_asr),
@@ -204,7 +187,8 @@ class DataReader(object):
                 cur_sysconf_slot,
                 cur_sysconf_value,
                 deepcopy(cur_bs),
-                deepcopy(prev_belief_state)
+                deepcopy(prev_belief_state),
+                deepcopy(turn_bs)
             ))
 
             prev_belief_state = deepcopy(cur_bs)
@@ -225,17 +209,20 @@ class DataReader(object):
             cur_dial = self._normalize_dial(data[idx]["dialogue"])
             dialogues.append(cur_dial)
 
-            # Todo:: Remove the same state between prev belief state and cur belief state to create turn-level data.
             # Informable slot set 'none' and request slot set []
-
             for turn_idx, turn in enumerate(cur_dial):
                 cur_label = [("request", req_slot) for req_slot in turn[4]["request"]]
                 for inf_slot in turn[4]:
                     if inf_slot != "request":
                         cur_label.append((inf_slot, turn[4][inf_slot]))
 
+                turn_label = [("request", req_slot) for req_slot in turn[6]["request"]]
+                for inf_slot in turn[6]:
+                    if inf_slot != "request":
+                        turn_label.append((inf_slot, turn[6][inf_slot]))
+
                 transcription_and_asr = turn[0]
-                cur_utterance = (transcription_and_asr, turn[1], turn[2], turn[3], cur_label, turn[5]) # turn[5] is the past belief state
+                cur_utterance = (transcription_and_asr, turn[1], turn[2], turn[3], cur_label, turn[5], turn_label) # turn[5] is the past belief state
 
                 training_turns.append(cur_utterance)
 
@@ -246,3 +233,24 @@ class DataReader(object):
         self.data['train'] = self._load_data(trainfile)
         self.data['test'] = self._load_data(testfile)
         self.data['valid'] = self._load_data(validfile)
+
+
+def normalize_transcription(transcription, language):
+    """
+    Returns the clean (i.e. handling interpunction signs) string for the given language.
+    """
+    exclude = set(string.punctuation)
+    exclude.remove("'")
+
+    transcription = ''.join(ch for ch in transcription if ch not in exclude)
+
+    transcription = transcription.lower()
+    transcription = transcription.replace(u"’", "'")
+    transcription = transcription.replace(u"‘", "'")
+    transcription = transcription.replace("don't", "dont")
+    if language == "italian":
+        transcription = transcription.replace("'", " ")
+    if language == "english":
+        transcription = transcription.replace("'", "")
+
+    return transcription
