@@ -256,13 +256,15 @@ def NeuralBeliefTracker(vector_dimension, label_count,
 
         accuracy = tf.reduce_mean(correct_prediction)
         # this will count number of positives - they are marked with 1 in true_predictions
-        num_positives = tf.reduce_sum(true_predictions)     # TP + FN
+
+        # TODO:: Error!! Change recall precision f_score defination!!!
+        num_positives = tf.reduce_sum(true_predictions)
         # positives are indicated with ones.
-        classified_positives = tf.reduce_sum(predictions)   # TP + FP
+        classified_positives = tf.reduce_sum(predictions)
         # will have ones in all places where both are predicting positives
         true_positives = tf.multiply(predictions, true_predictions)
         # if indicators for positive of both are 1, then it is positive.
-        num_true_positives = tf.reduce_sum(true_positives)  # TP
+        num_true_positives = tf.reduce_sum(true_positives)
 
         recall = num_true_positives / num_positives
         precision = num_true_positives / classified_positives

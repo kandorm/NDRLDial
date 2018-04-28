@@ -117,8 +117,9 @@ class Model(object):
         valid_count2 = len(utterances_valid2)
 
         # TODO:: Change train/valid ratio.
-        utterances_train = utterances_train2 + utterances_valid2[: int(0.75 * valid_count2)]
-        utterances_valid = utterances_valid2[int(0.75 * valid_count2):]
+        train_of_valid_ratio = 0.75
+        utterances_train = utterances_train2 + utterances_valid2[: int(train_of_valid_ratio * valid_count2)]
+        utterances_valid = utterances_valid2[int(train_of_valid_ratio * valid_count2):]
         print "  ---Training using:", self.trainfile, "count:", len(utterances_train)
         print "  ---Validate using:", self.validfile, "count:", len(utterances_valid)
 
@@ -160,7 +161,7 @@ class Model(object):
 
             # TODO:: Changed validation metric from accuracy to f_score?
             # TODO:: Add early stopping?
-            best_f_score = -0.01
+            best_accuracy = -0.01
             epoch = 0
             max_epoch = self.max_epoch
             last_update = -1
@@ -191,30 +192,29 @@ class Model(object):
                                                               y_: batch_ys, y_past_state: batch_ys_prev,
                                                               keep_prob: 0.5})
                 # ===============================  VALIDATION  ===============================================
-                print "Epoch", epoch, "/", max_epoch
-                if epoch % 5 == 0 or epoch == max_epoch:
-                    print "Epoch", epoch - 4, "to", epoch, "took", round(time.time() - start_time_train, 2), "seconds."
-                    start_time_val = time.time()
-                    current_f_score = self._evaluate_model(sess, self.model_variables[slot], val_data)
-                    print "[F-Score] =", current_f_score, "for slot:", slot, \
-                        "Eval took", round(time.time() - start_time_val, 2), "seconds. Last update:", last_update, \
-                        "/", max_epoch, "Best f_score:", best_f_score
+                start_time_val = time.time()
+                current_accuracy = self._evaluate_model(sess, self.model_variables[slot], val_data)
+                print "Epoch", epoch, "/", max_epoch, "[Accuracy] =", current_accuracy, "for slot:", slot, \
+                    "Eval took", round(time.time() - start_time_val, 2), "seconds. Last update:", last_update, \
+                    "/", max_epoch, "Best accuracy:", best_accuracy
 
-                    # and if we got a new high score for validation f-score, we need to save the parameters:
-                    if current_f_score > best_f_score:
-                        last_update = epoch
-                        if epoch < 100:
-                            if int(epoch * 1.5) > max_epoch:
-                                max_epoch = int(epoch * 1.5)
-                        else:
-                            if int(epoch * 1.2) > max_epoch:
-                                max_epoch = int(epoch * 1.2)
-                        print "\n ======  New best validation metric:", round(current_f_score, 4), \
-                            " - saving these parameters. Epoch is:", epoch, "/", max_epoch, "======  \n"
-                        best_f_score = current_f_score
-                        saver.save(sess, self.modeldir + slot)
+                # and if we got a new high score for validation f-score, we need to save the parameters:
+                if current_accuracy > best_accuracy:
+                    last_update = epoch
+                    if epoch < 100:
+                        if int(epoch * 1.5) > max_epoch:
+                            max_epoch = int(epoch * 1.5)
+                    else:
+                        if int(epoch * 1.2) > max_epoch:
+                            max_epoch = int(epoch * 1.2)
+                    print "\n ======  New best validation metric:", round(current_accuracy, 4), \
+                        " - saving these parameters. Epoch is:", epoch, "/", max_epoch, "======  \n"
+                    best_accuracy = current_accuracy
+                    saver.save(sess, self.modeldir + slot)
+                if epoch % 5 == 0 or epoch == max_epoch or slot == 'request':
+                    print "Epoch", max(epoch - 4, 1), "to", epoch, "took", round(time.time() - start_time_train, 2), "seconds."
                     start_time_train = time.time()
-            print "The best parameters achieved a validation metric of", round(best_f_score, 4)
+            print "The best parameters achieved a validation metric of", round(best_accuracy, 4)
             print "\n============  Training this model took", round(time.time() - start_time, 1), "seconds.  ============\n"
 
     def test_net(self):
@@ -387,14 +387,15 @@ class Model(object):
                 # utterance[4] is the current belief state
                 # utterance[5] is the previous belief state
                 # utterance[6] is the current turn label
-                for (c_slot, c_value) in utterance[6]:
+                # TODO:: Change positive/negative labels from current_turn_label to current_belief_state ?
+                for (c_slot, c_value) in utterance[4]:
                     if c_slot == slot and (c_value != "none" and c_value != []):
                         slot_expressed_in_utterance = True  # if this is True, no negative examples for softmax.
                 if slot != "request":
                     # if utterance is positive example for one value, it will not be negative example for others.
                     # if utterance is not expressed, it will be negative example for all values.
                     for value_idx, value in enumerate(self.dialogue_ontology[slot]):
-                        if (slot, value) in utterance[6]:
+                        if (slot, value) in utterance[4]:
                             positive_examples[slot].append((utterance_idx, utterance, value_idx))
                         else:
                             if not slot_expressed_in_utterance:
@@ -405,7 +406,7 @@ class Model(object):
                     else:
                         values_expressed = []
                         for value_idx, value in enumerate(self.dialogue_ontology[slot]):
-                            if (slot, value) in utterance[6]:
+                            if (slot, value) in utterance[4]:
                                 values_expressed.append(value_idx)
                         positive_examples[slot].append((utterance_idx, utterance, values_expressed))
 
@@ -558,7 +559,7 @@ class Model(object):
         label_size = xs_labels.shape[1]
         batch_size = 16
         batch_count = int(math.ceil(float(example_count) / batch_size))
-        total_f_score = 0.0
+        total_accuracy = 0.0
         element_count = 0
 
         for idx in range(batch_count):
@@ -583,19 +584,19 @@ class Model(object):
             xss_labels[0:curr_len, :] = xs_labels[left_range:right_range, :]
             xss_prev_labels[0:curr_len, :] = xs_prev_labels[left_range:right_range, :]
 
-            [current_predictions, current_y, current_f_score, update_coefficient_load] = sess.run(
-                [predictions, y, f_score, update_coefficient],
+            [current_predictions, current_y, current_accuracy, update_coefficient_load] = sess.run(
+                [predictions, y, accuracy, update_coefficient],
                 feed_dict={x_full: xss_full, x_delex: xss_delex,
                            requested_slots: xss_sys_req, system_act_confirm_slots: xss_conf_slots,
                            system_act_confirm_values: xss_conf_values, y_: xss_labels, y_past_state: xss_prev_labels,
                            keep_prob: 1.0})
 
-            total_f_score += current_f_score
+            total_accuracy += current_accuracy
             element_count += 1
 
-        eval_f_score = round(total_f_score / element_count, 3)
+        eval_accuracy = round(total_accuracy / element_count, 3)
 
-        return eval_f_score
+        return eval_accuracy
 
     def _test_utterance(self, utterances, sess, model_variables, target_slot):
         """
@@ -625,15 +626,12 @@ class Model(object):
                 if isinstance(prev_belief_state[target_slot], list) and \
                         len(prev_belief_state[target_slot]) == value_count:
                     prev_belief_state_vector = numpy.array(prev_belief_state[target_slot], dtype="float32")
-                elif isinstance(prev_belief_state[target_slot], str):
+                else:
                     prev_value = prev_belief_state[target_slot]
                     if prev_value == "none" or prev_value not in self.dialogue_ontology[target_slot]:
                         prev_belief_state_vector[value_count - 1] = 1   # None
                     else:
                         prev_belief_state_vector[self.dialogue_ontology[target_slot].index(prev_value)] = 1
-                else:
-                    print 'Error previous belief state type!!!'
-                    pass
 
             delex_feature_vector = self._delexicalise_utterance_values(utterances[idx_utterance][0][0], target_slot)
 
@@ -726,7 +724,6 @@ class Model(object):
         for idx, utterance in enumerate(dialogue):
             list_of_predicted_belief_states.append({})
             predicted_bs = {}
-            predicted_bs_one_hot = {}
 
             for slot in slots_to_track:
                 # We will predict current_belief_state, so the true current belief state we set empty.
@@ -747,7 +744,7 @@ class Model(object):
                 else:
                     predicted_bs[slot] = self._value_of_belief_state_informable(self.dialogue_ontology[slot],
                                                                                 updated_belief_state, threshold=0.01)
-            prev_bs = deepcopy(list_of_predicted_belief_states[idx])
+            prev_bs = deepcopy(predicted_bs)
 
             trans_plus_sys = "User: " + str(utterance[0][0])
             trans_plus_sys += "  ASR: " + str(utterance[0][1])
