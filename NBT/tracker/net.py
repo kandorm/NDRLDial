@@ -166,13 +166,15 @@ class Model(object):
             max_epoch = self.max_epoch
             last_update = -1
 
+            # 'request' slot will converge quickly.
+            if slot in ['request']:
+                max_epoch = 40
+
             start_time_train = time.time()
 
             while epoch < max_epoch:
                 sys.stdout.flush()
                 epoch += 1
-                if epoch > 1 and slot == "request":
-                    break
 
                 for batch_id in range(self.batches_per_epoch):
                     random_positive_count = ratio[slot]
@@ -208,10 +210,17 @@ class Model(object):
                         if int(epoch * 1.2) > max_epoch:
                             max_epoch = int(epoch * 1.2)
                     print "\n ======  New best validation metric:", round(current_accuracy, 4), \
-                        " - saving these parameters. Epoch is:", epoch, "/", max_epoch, "======  \n"
+                        " - saving these parameters. Epoch is:", epoch, "/", max_epoch, "======\n"
                     best_accuracy = current_accuracy
                     saver.save(sess, self.modeldir + slot)
-                if epoch % 5 == 0 or epoch == max_epoch or slot == 'request':
+
+                elif current_accuracy == best_accuracy:
+                    if last_update + max_epoch * 0.2 < epoch:
+                        last_update = epoch
+                        saver.save(sess, self.modeldir + slot)
+                        print '\n=====  Update stop too early, force save!!  =====\n'
+
+                if epoch % 5 == 0 or epoch == max_epoch:
                     print "Epoch", max(epoch - 4, 1), "to", epoch, "took", round(time.time() - start_time_train, 2), "seconds."
                     start_time_train = time.time()
             print "The best parameters achieved a validation metric of", round(best_accuracy, 4)
@@ -228,9 +237,9 @@ class Model(object):
 
         # loading pre-trained models
         saver = tf.train.Saver()
-        slots_to_load = ["food", "price range", "area", "request"]
+        slots_to_load = ["food", "pricerange", "area", "request"]
         if self.language == "english":
-            slots_to_load = ["food", "price range", "area", "request"]
+            slots_to_load = ["food", "pricerange", "area", "request"]
         elif self.language == "italian":
             slots_to_load = ["cibo", "prezzo", "area", "request"]
         elif self.language == "german":
@@ -262,7 +271,7 @@ class Model(object):
         cur_asr = [(normalize_transcription(hyp, self.language), score) for (hyp, score) in asr_obs]
 
         if prev_belief_state is None:
-            prev_belief_state = {"food": "none", "area": "none", "price range": "none"}
+            prev_belief_state = {"food": "none", "area": "none", "pricerange": "none"}
 
         utterances = [((utterance, cur_asr), list(sysreq), list(sysconf_slot), list(sysconf_value), prev_belief_state)]
 
@@ -270,7 +279,8 @@ class Model(object):
         sess = tf.Session()
 
         prediction_dict = {}
-        cur_bs = {}
+        distribution_dict = {}
+        distribution_value_dict = {}
 
         for slot in self.dialogue_ontology:
             try:
@@ -281,15 +291,21 @@ class Model(object):
                 return
             distribution = self._test_utterance(utterances, sess, self.model_variables[slot], slot)[0]
 
-            cur_bs[slot] = list(distribution)
-            prediction_dict[slot] = {}
+            distribution_dict[slot] = list(distribution)
+            distribution_value_dict[slot] = {}
             values = self.dialogue_ontology[slot]
-            for idx, value in values:
-                prediction_dict[slot][value] = distribution[idx]
+            for idx, value in enumerate(values):
+                distribution_value_dict[slot][value] = distribution[idx]
             if slot != "request":
-                prediction_dict[slot]["none"] = distribution[-1]
+                distribution_value_dict[slot]["none"] = distribution[-1]
 
-        return prediction_dict, cur_bs
+            if slot == "request":
+                prediction_dict[slot] = self._value_of_belief_state_requestable(self.dialogue_ontology[slot],
+                                                                                distribution, threshold=0.5)
+            else:
+                prediction_dict[slot] = self._value_of_belief_state_informable(self.dialogue_ontology[slot],
+                                                                               distribution, threshold=0.01)
+        return prediction_dict, distribution_value_dict, distribution_dict
 
     def _extract_feature_vectors(self, utterances, use_asr=False):
         """
@@ -376,7 +392,7 @@ class Model(object):
         positive_examples = {}
         negative_examples = {}
 
-        slots = self.dialogue_ontology.keys()  # {'request', 'food', 'area', 'price range'}
+        slots = self.dialogue_ontology.keys()  # {'request', 'food', 'area', 'pricerange'}
         for slot_idx, slot in enumerate(slots):
             positive_examples[slot] = []
             negative_examples[slot] = []
@@ -744,7 +760,7 @@ class Model(object):
                 else:
                     predicted_bs[slot] = self._value_of_belief_state_informable(self.dialogue_ontology[slot],
                                                                                 updated_belief_state, threshold=0.01)
-            prev_bs = deepcopy(predicted_bs)
+            prev_bs = deepcopy(list_of_predicted_belief_states[idx])
 
             trans_plus_sys = "User: " + str(utterance[0][0])
             trans_plus_sys += "  ASR: " + str(utterance[0][1])
@@ -768,7 +784,7 @@ class Model(object):
         """
         informable_slots = []
         if self.language == "english" or self.language == "en":
-            informable_slots = ["food", "price range", "area"]
+            informable_slots = ["food", "pricerange", "area"]
         elif self.language == "italian" or self.language == "it":
             informable_slots = ["cibo", "prezzo", "area"]
         elif self.language == "german" or self.language == "de":

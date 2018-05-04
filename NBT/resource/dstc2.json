@@ -4,7 +4,7 @@
         "area", 
         "food", 
         "phone", 
-        "price range", 
+        "pricerange",
         "postcode", 
         "name"
     ], 
@@ -14,7 +14,7 @@
             "area", 
             "food", 
             "phone", 
-            "price range", 
+            "pricerange",
             "postcode", 
             "name"
         ],
@@ -111,7 +111,7 @@
             "welsh", 
             "world"
         ], 
-        "price range": [
+        "pricerange": [
             "cheap", 
             "moderate", 
             "expensive"

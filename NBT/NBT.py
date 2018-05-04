@@ -35,8 +35,8 @@ if __name__ == '__main__':
 
         while True:
             utterance = raw_input("Enter utterance for prediction:")
-            predictions, previous_belief_state = \
+            prediction_dict, distribution_dict, previous_belief_state = \
                 model.track_utterance([(utterance, 1.0)], [""], [""], [""], previous_belief_state)
-            print json.dumps(predictions, indent=4)
+            print json.dumps(prediction_dict, indent=4)
 
 

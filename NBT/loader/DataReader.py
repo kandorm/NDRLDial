@@ -35,6 +35,7 @@ class DataReader(object):
 
         # a bit of hard-coding to make our lives easier.
         if u"price" in word_vectors and u"range" in word_vectors:
+            word_vectors[u"pricerange"] = word_vectors[u"price"] + word_vectors[u"range"]
             word_vectors[u"price range"] = word_vectors[u"price"] + word_vectors[u"range"]
         if u"post" in word_vectors and u"code" in word_vectors:
             word_vectors[u"postcode"] = word_vectors[u"post"] + word_vectors[u"code"]
@@ -117,10 +118,10 @@ class DataReader(object):
         pure_requestables = []
         if self.language == "english":
             null_bs["food"] = "none"
-            null_bs["price range"] = "none"
+            null_bs["pricerange"] = "none"
             null_bs["area"] = "none"
             null_bs["request"] = []
-            informable_slots = ["food", "price range", "area"]
+            informable_slots = ["food", "pricerange", "area"]
             pure_requestables = ["address", "phone", "postcode"]
         elif self.language == "italian":
             null_bs["area"] = "none"
