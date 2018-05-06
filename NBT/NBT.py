@@ -14,7 +14,7 @@ import json
 
 sys.path.insert(0, '.')
 from NBT.utils.commandparser import NBTOptParser
-from NBT.tracker.net import Model
+from NBT.tracker.net import Tracker
 
 import warnings
 warnings.simplefilter("ignore", DeprecationWarning)
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     args = NBTOptParser()
     config = args.config
 
-    model = Model(config)
+    model = Tracker(config)
     if args.mode == 'train':
         model.train_net()
     elif args.mode == 'test':
@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
         while True:
             utterance = raw_input("Enter utterance for prediction:")
-            prediction_dict, distribution_dict, previous_belief_state = \
+            prediction_dict, previous_belief_state, _ = \
                 model.track_utterance([(utterance, 1.0)], [""], [""], [""], previous_belief_state)
             print json.dumps(prediction_dict, indent=4)
 

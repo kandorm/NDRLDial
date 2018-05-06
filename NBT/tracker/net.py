@@ -11,7 +11,7 @@ from NBT.nn.NeuralBeliefTracker import *
 from ConfigParser import SafeConfigParser
 
 
-class Model(object):
+class Tracker(object):
 
     def __init__(self, config=None):
         # not enough info to execute
@@ -643,11 +643,20 @@ class Model(object):
                         len(prev_belief_state[target_slot]) == value_count:
                     prev_belief_state_vector = numpy.array(prev_belief_state[target_slot], dtype="float32")
                 else:
-                    prev_value = prev_belief_state[target_slot]
-                    if prev_value == "none" or prev_value not in self.dialogue_ontology[target_slot]:
-                        prev_belief_state_vector[value_count - 1] = 1   # None
-                    else:
-                        prev_belief_state_vector[self.dialogue_ontology[target_slot].index(prev_value)] = 1
+                    if type(prev_belief_state[target_slot]) in [str, unicode]:
+                        prev_value = prev_belief_state[target_slot]
+                        if prev_value == "none" or prev_value not in self.dialogue_ontology[target_slot]:
+                            prev_belief_state_vector[value_count - 1] = 1   # None
+                        else:
+                            prev_belief_state_vector[self.dialogue_ontology[target_slot].index(prev_value)] = 1
+                    elif type(prev_belief_state[target_slot]) in [dict]:
+                        values = prev_belief_state[target_slot].keys()
+                        for val in values:
+                            if val == "none":
+                                prev_belief_state_vector[-1] = prev_belief_state[target_slot][val]
+                            else:
+                                prev_belief_state_vector[self.dialogue_ontology[target_slot].index(val)] = \
+                                    prev_belief_state[target_slot][val]
 
             delex_feature_vector = self._delexicalise_utterance_values(utterances[idx_utterance][0][0], target_slot)
 
