@@ -196,7 +196,7 @@ class BasicTemplateGenerator(object):
                 continue
             m = re.search('^([^\(\)]*)\((.*)\)(.*)$', word.strip())
             if m is None:
-                exit('Parsing failed in %s' % word.strip())
+                print 'Parsing failed in %s' % word.strip()
             ftn_name = m.group(1)
             ftn_args = [x.strip() for x in m.group(2).split(',')]
             remaining = ''
@@ -207,10 +207,10 @@ class BasicTemplateGenerator(object):
             if '$' in ftn_name:
                 tokens = ftn_name.split('_')
                 if len(tokens) > 2:
-                    exit('More than one underbar _ found in function name %s' % ftn_name)
+                    print 'More than one underbar _ found in function name %s' % ftn_name
                 var = tokens[0][1:]
                 if var not in non_term_map:
-                    exit('Unable to find nonterminal %s in non terminal map.' % var)
+                    print 'Unable to find nonterminal %s in non terminal map.' % var
                 ftn_name = ftn_name.replace(var, non_term_map[var])
 
             # Processing function args.

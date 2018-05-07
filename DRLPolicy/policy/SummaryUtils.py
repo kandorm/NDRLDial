@@ -141,41 +141,16 @@ def getInformRequestedSlots(requested_slots, name, entities):
             return _getInformNoneVenue({'name': name})
 
     else:
-        result = [ent for ent in entities if ent['name'] != name]
+        result = [ent for ent in entities if ent['name'] == name]
         if len(result) > 0:
             ent = Settings.random.choice(result)
             return _getInformRequestedSlotsForEntity(requested_slots, ent)
         else:
-            print 'Couldn\'t find the provided name: ' + name
-            return _getInformNoneVenue({'name': name})
-
-
-def getInformAlternativeEntities(accepted_values, entities, recommended_list):
-    """
-    returns an inform dialogue act informing about an entity that has not been informed before
-    The dialogue act for summary action 'inform_alternatives'.
-
-    :param accepted_values: dict of slot-value-beliefs whose beliefs are above none
-    :param entities: search results from knowledge base (match to the constraints, if no constraints: random 10)
-    :param recommended_list: list of already mentioned entities
-    :return: the dialogue act representing either
-    1) there is not matching venue: inform(name=none, slot=value, ...)
-    2) it offers a venue which is not on the prohibited list
-    3) if all matching venues are on the prohibited list then it says
-       there is no venue except x,y,z,... with such features:
-       inform(name=none, name!=x, name!=y, name!=z, ..., slot=value, ...)
-    """
-
-    constraints = getConstraints(accepted_values)
-    if len(entities) == 0:
-        return _getInformNoneVenue(constraints)
-    else:
-        for ent in entities:
-            name = ent['name']
-            if name not in recommended_list:
-                return _getInformEntity(accepted_values, ent)
-
-        return _getInformNoMoreVenues(accepted_values, entities)
+            if len(entities) > 0:
+                ent = Settings.random.choice(entities)
+                return _getInformRequestedSlotsForEntity(requested_slots, ent)
+            else:
+                return _getInformNoneVenue({'name': name})
 
 
 def _convert_feats_to_str(feats):
@@ -233,7 +208,10 @@ def _getInformNoneVenue(constraints):
         if slot != 'name':
             if constraints[slot] != 'dontcare':
                 feats[slot] = constraints[slot]
-    return 'inform(name=none, {})'.format(_convert_feats_to_str(feats))
+    if not feats:
+        return 'inform(name=none)'
+    else:
+        return 'inform(name=none, {})'.format(_convert_feats_to_str(feats))
 
 
 def _getInformRequestedSlotsForEntity(requested_slots, ent):
@@ -259,7 +237,6 @@ def _getInformRequestedSlotsForEntity(requested_slots, ent):
                 slot_value_pair.append('{}="{}"'.format(slot, ent[slot]))
             except KeyError:
                 print ent
-
     else:
         max_num_feats = 5
         if Settings.config.has_option("summaryacts", "maxinformslots"):

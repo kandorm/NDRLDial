@@ -68,7 +68,7 @@ class GPPolicy(Policy):
         :type recommended_list: list
         :returns: the next system action
         """
-        none_executable_actions = self.actions.get_none_executable(belief_state)
+        none_executable_actions = self.actions.get_none_executable(belief_state, entities)
 
         cur_state = GPState(belief_state, replace=self.replace)
         executable = self._create_executable(none_executable_actions)

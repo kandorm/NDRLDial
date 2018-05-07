@@ -1,6 +1,6 @@
 {
     "real2abstract": {
-        "addr": "infoslot04", 
+        "address": "infoslot04",
         "name": "name", 
         "area": "slot01", 
         "food": "slot02", 
@@ -20,7 +20,7 @@
         "infoslot03": "phone", 
         "infoslot00": "signature", 
         "infoslot01": "postcode", 
-        "infoslot04": "addr", 
+        "infoslot04": "address",
         "type": "type"
     }
 }

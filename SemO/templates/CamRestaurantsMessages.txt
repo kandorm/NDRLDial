@@ -239,9 +239,9 @@
   $area, $food, $price : "serving $price $food food in the area of $area";
 }
 
-%addr_str($addr) {
+%address_str($address) {
   none : "I don't know their address";	
-  $addr : "Their address is $addr";
+  $address : "Their address is $address";
 }
 
 %phone_str($phone) {
@@ -254,9 +254,9 @@
   $postcode : "Their postcode is $postcode";
 }
 
-%addr_inf($addr) {
-  none : "I don't know their address";	
-  $addr : "Their address is $addr";
+%address_inf($address) {
+  none : "I don't know their address";
+  $address : "Their address is $address";
 }
 
 %phone_inf($phone) {
@@ -275,11 +275,11 @@
 }
 
 
-%addr_phone_str($addr, $phone) {
+%address_phone_str($address, $phone) {
   none, none : "I don't know their address or phone number";
   none, $phone : "I don't know their address but their phone number is $phone";
-  $addr, none : "I don't know there phone number but their address is $addr";
-  $addr, $phone : "Their address is $addr and their phone number is $phone";
+  $address, none : "I don't know there phone number but their address is $address";
+  $address, $phone : "Their address is $address and their phone number is $phone";
 }
 
 %phone_postcode_str($phone, $postcode) {
@@ -289,36 +289,36 @@
   $phone, $postcode : "Their phone number is $phone and their post code is $postcode .";
 }
 
-%addr_postcode_str($addr, $postcode) {
+%address_postcode_str($address, $postcode) {
   none, none : "I don't know the address or the post code";
   none, $postcode : "I don't know the address but the post code is $postcode";
-  $addr, none : "I don't know their post code but the address is $addr";
-  $addr, $postcode : "Their address is $addr , $postcode";
+  $address, none : "I don't know their post code but the address is $address";
+  $address, $postcode : "Their address is $address , $postcode";
 }
 
-%addr_phone_postcode_str($addr, $phone, $postcode) {
+%address_phone_postcode_str($address, $phone, $postcode) {
   none, none, none : "I don't know the address, phone number or post code";
   none, none, $postcode : "I don't know the address or phone number but the post code is $postcode";
   none, $phone, none : "I don't know the address or post code but the phone number is $phone";
-  $addr, none, none : "I don't know the phone number or post code but the address is $addr";
+  $address, none, none : "I don't know the phone number or post code but the address is $address";
   none, $phone, $postcode : "I don't know the address but the post code is $postcode and the phone number is $phone";
-  $addr, $phone, none : "I don't know the post code but the phone number is $phone and the address is $addr";
-  $addr, none, $postcode : "I don't know the phone number but the address is $addr and the post code is $postcode";
-  $addr, $phone, $postcode : "Their address is $addr $postcode and their phone number is $phone";
+  $address, $phone, none : "I don't know the post code but the phone number is $phone and the address is $address";
+  $address, none, $postcode : "I don't know the phone number but the address is $address and the post code is $postcode";
+  $address, $phone, $postcode : "Their address is $address $postcode and their phone number is $phone";
 }
 
-%addr_phone_name_str($addr, $phrone, $name) {
+%address_phone_name_str($address, $phrone, $name) {
   none, none, $name : "I don't know the phone number or address of $name";
   none, $phone, $name : "The phone number of $name is $phone but I don't know the address";
-  $addr, none, $name : "The address of $name is $addr but I don't know the phone number";
-  $addr, $phone, $name : "The phone number of $name is $phone and it is on $addr";
+  $address, none, $name : "The address of $name is $address but I don't know the phone number";
+  $address, $phone, $name : "The phone number of $name is $phone and it is on $address";
 }
 
-%addr_postcode_name_str($addr, $postcode, $name) {
+%address_postcode_name_str($address, $postcode, $name) {
   none, none, $name : "I don't know the address or postcode of $name";
   none, $postcode, $name : "The postcode of $name is $postcode but I don't know the address";
-  $addr, none, $name : "The address of $name is $addr but I don't know the postcode";
-  $addr, $postcode, $name : "$name is at $addr , $postcode";
+  $address, none, $name : "The address of $name is $address but I don't know the postcode";
+  $address, $postcode, $name : "$name is at $address , $postcode";
 }
 
 
@@ -369,17 +369,17 @@ reqmore(drinks=dontcare) : "Would you like me to look for venues serving any kin
 reqmore(music=dontcare) : "Would you like me to look for venues playing any kind of music?";
 reqmore(near=dontcare) : "Would you like me to look for venues that are a bit further away?";
 reqmore(area=dontcare) : "Would you like me to look for venues in other parts of town?";
-reqmore(addr=dontcare) : "Would you like me to look for venues in other parts of town?";
+reqmore(address=dontcare) : "Would you like me to look for venues in other parts of town?";
 reqmore(phone=dontcare) : "Would you like me to look for venues with another phone number?";
 
 
 # Explicit Confirmations
 
 confirm() : "Please tell me more about the place you are looking for!";
-confirm(addr=$U) : "A venue on $U is that right?";
+confirm(address=$U) : "A venue on $U is that right?";
 confirm(type=$U) : "You are looking for a $U is that right?";
-confirm(type=$U,addr=dontcare) : "Ok, a $U and you dont care about the address is that right?";
-confirm(type=$U,addr=$V) : "Did you say you are looking for a $U on $V?";
+confirm(type=$U,address=dontcare) : "Ok, a $U and you dont care about the address is that right?";
+confirm(type=$U,address=$V) : "Did you say you are looking for a $U on $V?";
 confirm(type=$U,area=dontcare) : "Ok, a $U in any part of town is that right?";
 confirm(type=$U,area=$V) : "Did you say you are looking for a $U in the area of $V?";
 confirm(type=$U,drinks=dontcare) : "You are looking for a $U serving any kind of drinks right?";
@@ -409,7 +409,7 @@ confirm(type=$U,acceptscreditcards=dontcare) : "Let me confirm, you are looking 
 confirm(type=$U,acceptscreditcards=false) : "Did you say you are looking for a $U that doesn't accepts credit cards?";
 confirm(type=$U,acceptscreditcards=1) : "Did you say you are looking for a $U that accepts credit cards?";
 
-confirm(type=$U,area=$V,addr=$W) : "Let me confirm, A $U on $W in the area of $V right?";
+confirm(type=$U,area=$V,address=$W) : "Let me confirm, A $U on $W in the area of $V right?";
 
 confirm(type=$U,area=dontcare,stars=dontcare) : "Let me confirm, a $U with any number of stars anywhere in town right?";
 confirm(type=$U,area=dontcare,stars=$W) : "Let me confirm, A $W star $U anywhere in town right?";
@@ -461,8 +461,8 @@ confirm(type=$U,pricerange=dontcare,stars=$W) : "Let me confirm, You are looking
 confirm(type=$U,pricerange=$W,stars=dontcare) : "Let me confirm, You are looking for a $U in the $W price range and you dont care about the number of stars right?";
 confirm(type=$U,pricerange=$V,stars=$W) : "Let me confirm, You are looking for a $U in the $V price range with $W stars right?";
 
-confirm(addr=dontcare) : "Ok, a venue and you dont care about the address is that right?";
-confirm(addr=$V) : "Did you say you are looking for a venue on $V?";
+confirm(address=dontcare) : "Ok, a venue and you dont care about the address is that right?";
+confirm(address=$V) : "Did you say you are looking for a venue on $V?";
 confirm(area=dontcare) : "Ok, a venue in any part of town is that right?";
 confirm(area=$V) : "Did you say you are looking for a venue in the area of $V?";
 confirm(drinks=dontcare) : "You are looking for a venue serving any kind of drinks right?";
@@ -495,7 +495,7 @@ confirm(acceptscreditcards=dontcare) : "Let me confirm you don't care if it acce
 confirm(acceptscreditcards=1)  :   "Let me confirm you want a venue that accepts credit cards, right?";
 confirm(acceptscreditcards=false) : "Let me confirm you want a venue that doesn't accept credit cards, right?";
 
-confirm(area=$V,addr=$W) : "Let me confirm, A venue on $W in the area of $V right?";
+confirm(area=$V,address=$W) : "Let me confirm, A venue on $W in the area of $V right?";
 
 confirm(area=dontcare,stars=dontcare) : "Let me confirm, a venue with any number of stars anywhere in town right?";
 confirm(area=dontcare,stars=$W) : "Let me confirm, A $W star venue anywhere in town right?";

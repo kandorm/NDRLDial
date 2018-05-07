@@ -424,7 +424,7 @@ class UMHdcSim(object):
         else:
             # If there are unsatisfied requests,
             if goal.is_venue_recommended():
-                # If a venue has been recommended already, then ask for empty requests, like phone, addr.
+                # If a venue has been recommended already, then ask for empty requests, like phone, address.
                 unsatisfied = goal.get_unsatisfied_requests()
                 for info in unsatisfied:
                     self.agenda.push(DiaAct('request(%s)' % info))

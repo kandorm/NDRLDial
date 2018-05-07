@@ -41,7 +41,7 @@ class SummaryAction(object):
     # MASK OVER SUMMARY ACTION SET
     # ------------------------------------------------------------------------------------
 
-    def get_none_executable(self, belief_state):
+    def get_none_executable(self, belief_state, entities):
         """
         Set of rules defining the mask over the action set, given the current belief state
         :param belief_state: the state the policy acts on
@@ -63,8 +63,13 @@ class SummaryAction(object):
                     nonexec.append(action)
 
             elif action == "inform_byname":
-                if SummaryUtils.getTopBelief(belief_state['name'])[0] == 'none':
+                top_name = SummaryUtils.getTopBelief(belief_state['name'])[0]
+                if top_name == 'none':
                     mask_action = True
+                else:   # name is inconsistent with constraints
+                    result = [ent for ent in entities if ent['name'] == top_name]
+                    if len(result) == 0:
+                        mask_action = True
                 if mask_action and self.inform_mask:
                     nonexec.append(action)
 

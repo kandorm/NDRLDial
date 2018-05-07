@@ -270,7 +270,7 @@ class Tracker(object):
         utterance = normalize_transcription(asr_obs[0][0], self.language)
         cur_asr = [(normalize_transcription(hyp, self.language), score) for (hyp, score) in asr_obs]
 
-        if prev_belief_state is None:
+        if not prev_belief_state:
             prev_belief_state = {"food": "none", "area": "none", "pricerange": "none"}
 
         utterances = [((utterance, cur_asr), list(sysreq), list(sysconf_slot), list(sysconf_value), prev_belief_state)]
