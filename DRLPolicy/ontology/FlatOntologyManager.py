@@ -16,10 +16,10 @@ class FlatOntologyManager(object):
             print e
 
     def get_ontology(self):
-        return copy.deepcopy(self.ontology)
+        return self.ontology
 
     def get_type(self):
-        return copy.copy(self.ontology['type'])
+        return self.ontology['type']
 
     def get_requestable_slots(self):
         return copy.copy(self.ontology['requestable'])
@@ -54,7 +54,7 @@ class FlatOntologyManager(object):
         return self.ontology['informable'].keys()
 
     def get_informable_slots_and_values(self):
-        return copy.deepcopy(self.ontology['informable'])
+        return self.ontology['informable']
 
     def get_informable_slot_values(self, slot):
         try:
@@ -82,7 +82,7 @@ class FlatOntologyManager(object):
 
         candidate = copy.deepcopy(self.ontology['informable'][slot])
         if len(candidate) == 0:
-            exit("candidates for slot {} should not be empty".format(slot))
+            print "candidates for slot {} should not be empty".format(slot)
         if not no_dontcare:
             candidate += ['dontcare']
         candidate = list(set(candidate) - set(no_these))

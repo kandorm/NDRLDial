@@ -69,6 +69,9 @@ class Tracker(object):
         self.model_variables = {}
         self._init_model()
 
+        # for track, avoid reload model
+        self.sessions = {}
+
     def _init_model(self):
         """
         This method initialize neural belief tracker model variables for every informable slot and request.
@@ -275,21 +278,26 @@ class Tracker(object):
 
         utterances = [((utterance, cur_asr), list(sysreq), list(sysconf_slot), list(sysconf_value), prev_belief_state)]
 
-        saver = tf.train.Saver()
-        sess = tf.Session()
+        slots = self.dialogue_ontology.keys()
+
+        if not self.sessions:
+            saver = tf.train.Saver()
+            for slot in slots:
+                try:
+                    path_to_load = self.modeldir + slot
+                    self.sessions[slot] = tf.Session()
+                    saver.restore(self.sessions[slot], path_to_load)
+                except:
+                    print "Can't restore for slot", slot, " - from file", path_to_load
+                    return
 
         prediction_dict = {}
         distribution_dict = {}
         distribution_value_dict = {}
 
-        for slot in self.dialogue_ontology:
-            try:
-                path_to_load = self.modeldir + slot
-                saver.restore(sess, path_to_load)
-            except:
-                print "Can't restore for slot", slot, " - from file", path_to_load
-                return
-            distribution = self._test_utterance(utterances, sess, self.model_variables[slot], slot)[0]
+        for slot in slots:
+
+            distribution = self._test_utterance(utterances, self.sessions[slot], self.model_variables[slot], slot)[0]
 
             distribution_dict[slot] = list(distribution)
             distribution_value_dict[slot] = {}

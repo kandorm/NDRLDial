@@ -74,7 +74,11 @@ class SummaryAction(object):
                     nonexec.append(action)
 
             elif "request_" in action:
-                pass
+                top_value = SummaryUtils.getTopBelief(belief_state[action.split("_")[1]])[0]
+                if top_value != 'none':
+                    mask_action = True
+                if mask_action and self.request_mask:
+                    nonexec.append(action)
 
             elif "confirm_" in action:
                 slot_summary = array_slot_summary[action.split("_")[1]]
@@ -135,6 +139,12 @@ class SummaryAction(object):
         return 'confreq({}="{}",{})'.format(cslot, top_value, rslot)
 
     def getInformByConstraints(self, belief_state, entities):
+        requested_slots = SummaryUtils.getRequestedSlots(belief_state)
+        if len(requested_slots) > 0 and len(entities) > 0:
+            ent = Settings.random.choice(entities)
+            name = ent['name']
+            return SummaryUtils.getInformRequestedSlots(requested_slots, name, entities)
+
         accepted_values = SummaryUtils.getTopBeliefs(belief_state)
         constraints = SummaryUtils.getConstraints(accepted_values)
         return SummaryUtils.getInformByConstraints(constraints, entities)

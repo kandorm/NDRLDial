@@ -58,7 +58,7 @@ class DataBaseSQLite(object):
                     values.append(cond.val)
             elif isinstance(constraints, dict):
                 for slot, value in constraints.iteritems():
-                    if value not in ['dontcare', 'none']:
+                    if value and value not in ['dontcare', 'none']:
                         bits.append(slot + '= ?  COLLATE NOCASE')
                         values.append(value)
 

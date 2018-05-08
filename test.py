@@ -9,6 +9,8 @@ if __name__ == '__main__':
 
     dial = NDRLDial(config)
     if args.mode == 'test':
+        dial.test()
+    elif args.mode == 'track':
         belief_state = {}
         last_sys_act = ''
         generated = ''
