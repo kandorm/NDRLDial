@@ -610,6 +610,7 @@ inform(name=$X,type=$U,$Y=$O,$Z=$P,$W=$R,$Q=$T,$G=$H,$B=$D) : "$X is a nice $U, 
 inform(name=$X,type=$U,$Y=$O,$Z=$P,$W=$R,$Q=$T,$G=$H,$B=$D,$F=$C) : "$X is a nice $U, %$Y_inf($O), %$Z_inf($P), %$W_inf($R), %$Q_inf($T), %$G_inf($H) %$B_inf($D) and %$C_inf($F).";
 inform(name=$X,type=$U,$Y=$O,$Z=$P,$W=$R,$Q=$T,$G=$H,$B=$D,$F=$C,$I=$J) : "$X is a nice $U, %$Y_inf($O), %$Z_inf($P), %$W_inf($R), %$Q_inf($T), %$G_inf($H) %$B_inf($D) %$C_inf($F) and %$I_inf($J).";
 
+inform(name=$X) : "$X is a nice place.";
 inform(name=$X,$Y=$O) : "$X is a nice place %$Y_inf($O).";
 inform(name=$X,$Y=$O,$Z=$P) : "$X is a nice place, %$Y_inf($O) and %$Z_inf($P).";
 inform(name=$X,$Y=$O,$Z=$P,$W=$R) : "$X is a nice place, %$Y_inf($O), %$Z_inf($P) and %$W_inf($R).";

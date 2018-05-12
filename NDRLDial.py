@@ -1,10 +1,10 @@
 import copy
 import json
 from loader.DataReader import DataReader
-from DRLPolicy.policy import SummaryUtils
+from DRLP.policy import SummaryUtils
 from utils.dact import DiaAct
 from NBT.tracker.net import Tracker
-from DRLPolicy.Model import DRLPolicy
+from DRLP.Model import DRLP
 from KB.KBManager import KBManager
 from SemO.BasicSemOMethod import BasicSemO
 
@@ -25,7 +25,7 @@ class NDRLDial(object):
         self.policy_config = parser.get('config', 'policy_config')
 
         self.tracker = Tracker(self.tracker_config)
-        self.policy_manager = DRLPolicy(self.policy_config)
+        self.policy_manager = DRLP(self.policy_config)
         # Connect to the knowledge base
         self.kb_manager = KBManager()
         self.generator = BasicSemO()
@@ -38,13 +38,14 @@ class NDRLDial(object):
         self.ontology = self.reader.ontology
         self.corpus = self.reader.corpus
 
+        self.requestable_slots = self.ontology['requestable']
         self.name_values = self.ontology['informable']['name'] + ['none']
 
     def test(self):
 
         print '\n===============  Test Model  =======================\n'
 
-        stats = {'success': 0.0, 'turn_size': 0.0}
+        stats = {'vmc': 0.0, 'success': 0.0, 'turn_size': 0.0}
 
         log = {'stats': {}, 'result': []}
 
@@ -57,13 +58,16 @@ class NDRLDial(object):
             constraint = copy.deepcopy(goal)
             del constraint['request']
 
+            db_has = self.kb_manager.get_length_entity_by_features(constraint) > 0
+
             venue_name = ''
             venue_has_find = False
             turn = 0
+            req = []
 
             # for log
             c_log = {'dial': [], 'goal': goal, 'finished': finished, 'venue': '',
-                     'success': 0.0, 'turn_size': 0.0}
+                     'vmc': 0.0, 'success': 0.0, 'turn_size': 0.0}
 
             # param for dialogue continue
             belief_state = {}
@@ -77,9 +81,8 @@ class NDRLDial(object):
                 sys_act = DiaAct(last_sys_act)
                 if sys_act.act == 'inform':
                     for item in sys_act.items:
-                        name = sys_act.get_value('name', negate=False)
-                        if name not in ['none', None]:
-                            venue_name = name
+                        if item.slot == 'name' and item.op == '=' and item.val not in ['none', 'dontcare', None]:
+                            venue_name = item.val
                             if not venue_has_find:
                                 constraint['name'] = venue_name
                                 entities = self.kb_manager.entity_by_features(constraint)
@@ -88,8 +91,12 @@ class NDRLDial(object):
                                     stats['turn_size'] += turn
                                     c_log['turn_size'] += turn
 
+                        if item.slot in self.requestable_slots:
+                            req.append(item.slot)
+
                 c_log['dial'].append({'user_transcript': user_utt,
                                       'belief_state': str(SummaryUtils.getTopBeliefs(belief_state)),
+                                      'request': str(SummaryUtils.getRequestedSlots(belief_state)),
                                       'sys_act': str(sys_act)})
 
             c_log['venue'] = venue_name
@@ -98,18 +105,29 @@ class NDRLDial(object):
                 stats['turn_size'] += turn
                 c_log['turn_size'] += turn
 
-            if venue_name:
-                constraint['name'] = venue_name
-                entities = self.kb_manager.entity_by_features(constraint)
-                if len(entities) > 0:
-                    stats['success'] += 1
-                    c_log['success'] += 1
+            if not db_has:
+                stats['vmc'] += 1
+                c_log['vmc'] += 1
+                stats['success'] += 1
+                c_log['success'] += 1
+            else:
+                if venue_name:
+                    constraint['name'] = venue_name
+                    entities = self.kb_manager.entity_by_features(constraint)
+                    if len(entities) > 0:
+                        stats['vmc'] += 1
+                        c_log['vmc'] += 1
+                        if set(req) & set(goal['request']) == set(goal['request']):
+                            stats['success'] += 1
+                            c_log['success'] += 1
 
             log['result'].append(c_log)
 
+        print 'Venue Match Rate  : %.1f%%' % (100 * stats['vmc'] / float(len(self.corpus)))
         print 'Task Success Rate : %.1f%%' % (100 * stats['success'] / float(len(self.corpus)))
         print 'Average Turn Size : %.1f' % (stats['turn_size'] / float(len(self.corpus)))
 
+        log['stats']['vmc'] = str(round(100 * stats['vmc'] / float(len(self.corpus)), 2))
         log['stats']['success'] = str(round(100 * stats['success'] / float(len(self.corpus)), 2))
         log['stats']['turn_size'] = str(round(stats['turn_size'] / float(len(self.corpus)), 2))
 
@@ -163,12 +181,11 @@ class NDRLDial(object):
             sys_act = DiaAct(str(sys_act))
 
         if sys_act.act == 'inform':
-            for item in sys_act.items:
-                if item.slot == 'name' and item.op == '=' and item.val not in ['none', 'dontcare']:
-                    name_slot = dict.fromkeys(self.name_values, 0.0)
-                    name_slot[item.val] = 1.0
-                    distribution_dict['name'] = name_slot
-                    break
+            name = sys_act.get_value('name', negate=False)
+            if name not in ['none', None]:
+                name_slot = dict.fromkeys(self.name_values, 0.0)
+                name_slot[name] = 1.0
+                distribution_dict['name'] = name_slot
 
         response['belief_state'] = distribution_dict
         response['last_sys_act'] = str(sys_act)

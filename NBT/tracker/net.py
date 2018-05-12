@@ -65,9 +65,11 @@ class Tracker(object):
         self.word_vector_size = self.reader.word_vector_size
         self.data = self.reader.data
 
-        # Neural Net Initialisation (keep variables packed so we can move them to either method):
-        self.model_variables = {}
-        self._init_model()
+        self.graph = tf.Graph()
+        with self.graph.as_default():
+            # Neural Net Initialisation (keep variables packed so we can move them to either method):
+            self.model_variables = {}
+            self._init_model()
 
         # for track, avoid reload model
         self.sessions = {}
@@ -156,76 +158,79 @@ class Tracker(object):
                 break
 
             # will be used to save model parameters with best validation scores.
-            saver = tf.train.Saver()
+            sess = tf.Session(graph=self.graph)
+            with self.graph.as_default():
 
-            init = tf.global_variables_initializer()
-            sess = tf.Session()
-            sess.run(init)
+                saver = tf.train.Saver()
+                init = tf.global_variables_initializer()
+                sess.run(init)
 
-            # TODO:: Changed validation metric from accuracy to f_score?
-            # TODO:: Add early stopping?
-            best_accuracy = -0.01
-            epoch = 0
-            max_epoch = self.max_epoch
-            last_update = -1
+                # TODO:: Changed validation metric from accuracy to f_score?
+                # TODO:: Add early stopping?
+                best_accuracy = -0.01
+                epoch = 0
+                max_epoch = self.max_epoch
+                last_update = -1
 
-            # 'request' slot will converge quickly.
-            if slot in ['request']:
-                max_epoch = 40
+                # 'request' slot will converge quickly.
+                if slot in ['request']:
+                    max_epoch = 40
 
-            start_time_train = time.time()
+                start_time_train = time.time()
 
-            while epoch < max_epoch:
-                sys.stdout.flush()
-                epoch += 1
+                while epoch < max_epoch:
+                    sys.stdout.flush()
+                    epoch += 1
 
-                for batch_id in range(self.batches_per_epoch):
-                    random_positive_count = ratio[slot]
-                    random_negative_count = self.batch_size - random_positive_count
-                    batch_data = self._generate_examples(slot, feature_vectors_train,
-                                                         positive_examples_train, negative_examples_train,
-                                                         random_positive_count, random_negative_count)
-                    (batch_xs_full, batch_sys_req, batch_sys_conf_slots, batch_sys_conf_values,
-                     batch_delex, batch_ys, batch_ys_prev) = batch_data
+                    for batch_id in range(self.batches_per_epoch):
+                        random_positive_count = ratio[slot]
+                        random_negative_count = self.batch_size - random_positive_count
+                        batch_data = self._generate_examples(slot, feature_vectors_train,
+                                                             positive_examples_train, negative_examples_train,
+                                                             random_positive_count, random_negative_count)
+                        (batch_xs_full, batch_sys_req, batch_sys_conf_slots, batch_sys_conf_values,
+                         batch_delex, batch_ys, batch_ys_prev) = batch_data
 
-                    [_, cf, cp, cr, ca] = sess.run([train_step, f_score, precision, recall, accuracy],
-                                                   feed_dict={x_full: batch_xs_full,
-                                                              x_delex: batch_delex,
-                                                              requested_slots: batch_sys_req,
-                                                              system_act_confirm_slots: batch_sys_conf_slots,
-                                                              system_act_confirm_values: batch_sys_conf_values,
-                                                              y_: batch_ys, y_past_state: batch_ys_prev,
-                                                              keep_prob: 0.5})
-                # ===============================  VALIDATION  ===============================================
-                start_time_val = time.time()
-                current_accuracy = self._evaluate_model(sess, self.model_variables[slot], val_data)
-                print "Epoch", epoch, "/", max_epoch, "[Accuracy] =", current_accuracy, "for slot:", slot, \
-                    "Eval took", round(time.time() - start_time_val, 2), "seconds. Last update:", last_update, \
-                    "/", max_epoch, "Best accuracy:", best_accuracy
+                        [_, cf, cp, cr, ca] = sess.run([train_step, f_score, precision, recall, accuracy],
+                                                       feed_dict={x_full: batch_xs_full,
+                                                                  x_delex: batch_delex,
+                                                                  requested_slots: batch_sys_req,
+                                                                  system_act_confirm_slots: batch_sys_conf_slots,
+                                                                  system_act_confirm_values: batch_sys_conf_values,
+                                                                  y_: batch_ys, y_past_state: batch_ys_prev,
+                                                                  keep_prob: 0.5})
+                    # ===============================  VALIDATION  ===============================================
+                    start_time_val = time.time()
+                    current_accuracy = self._evaluate_model(sess, self.model_variables[slot], val_data)
+                    print "Epoch", epoch, "/", max_epoch, "[Accuracy] =", current_accuracy, "for slot:", slot, \
+                        "Eval took", round(time.time() - start_time_val, 2), "seconds. Last update:", last_update, \
+                        "/", max_epoch, "Best accuracy:", best_accuracy
 
-                # and if we got a new high score for validation f-score, we need to save the parameters:
-                if current_accuracy > best_accuracy:
-                    last_update = epoch
-                    if epoch < 100:
-                        if int(epoch * 1.5) > max_epoch:
-                            max_epoch = int(epoch * 1.5)
-                    else:
-                        if int(epoch * 1.2) > max_epoch:
-                            max_epoch = int(epoch * 1.2)
-                    print "\n ======  New best validation metric:", round(current_accuracy, 4), \
-                        " - saving these parameters. Epoch is:", epoch, "/", max_epoch, "======\n"
-                    best_accuracy = current_accuracy
-                    saver.save(sess, self.modeldir + slot)
-
-                elif current_accuracy == best_accuracy:
-                    if last_update + max_epoch * 0.2 < epoch:
+                    # and if we got a new high score for validation f-score, we need to save the parameters:
+                    if current_accuracy > best_accuracy:
                         last_update = epoch
+                        if epoch < 100:
+                            if int(epoch * 1.5) > max_epoch:
+                                max_epoch = int(epoch * 1.5)
+                        else:
+                            if int(epoch * 1.2) > max_epoch:
+                                max_epoch = int(epoch * 1.2)
+                        print "\n ======  New best validation metric:", round(current_accuracy, 4), \
+                            " - saving these parameters. Epoch is:", epoch, "/", max_epoch, "======\n"
+                        best_accuracy = current_accuracy
                         saver.save(sess, self.modeldir + slot)
-                        print '\n=====  Update stop too early, force save!!  =====\n'
 
-                if epoch % 5 == 0 or epoch == max_epoch:
-                    print "Epoch", max(epoch - 4, 1), "to", epoch, "took", round(time.time() - start_time_train, 2), "seconds."
-                    start_time_train = time.time()
+                    """
+                    elif current_accuracy == best_accuracy:
+                        if last_update + max_epoch * 0.2 < epoch:
+                            last_update = epoch
+                            saver.save(sess, self.modeldir + slot)
+                            print '\n=====  Update stop too early, force save!!  =====\n'
+                    """
+
+                    if epoch % 5 == 0 or epoch == max_epoch:
+                        print "Epoch", max(epoch - 4, 1), "to", epoch, "took", round(time.time() - start_time_train, 2), "seconds."
+                        start_time_train = time.time()
             print "The best parameters achieved a validation metric of", round(best_accuracy, 4)
             print "\n============  Training this model took", round(time.time() - start_time, 1), "seconds.  ============\n"
 
@@ -238,8 +243,6 @@ class Tracker(object):
         indexed_evaluated_dialogue = []
         list_of_belief_states = []
 
-        # loading pre-trained models
-        saver = tf.train.Saver()
         slots_to_load = ["food", "pricerange", "area", "request"]
         if self.language == "english":
             slots_to_load = ["food", "pricerange", "area", "request"]
@@ -247,11 +250,15 @@ class Tracker(object):
             slots_to_load = ["cibo", "prezzo", "area", "request"]
         elif self.language == "german":
             slots_to_load = ["essen", "preisklasse", "gegend", "request"]
-        for load_slot in slots_to_load:
-            path_to_load = self.modeldir + load_slot
-            print "------  Loading Model", path_to_load, " ------"
-            sessions[load_slot] = tf.Session()
-            saver.restore(sessions[load_slot], path_to_load)
+
+        with self.graph.as_default():
+            # loading pre-trained models
+            saver = tf.train.Saver()
+            for load_slot in slots_to_load:
+                path_to_load = self.modeldir + load_slot
+                print "------  Loading Model", path_to_load, " ------"
+                sessions[load_slot] = tf.Session(graph=self.graph)
+                saver.restore(sessions[load_slot], path_to_load)
 
         # evaluate
         dialogue_count = len(dialogues)
@@ -281,15 +288,16 @@ class Tracker(object):
         slots = self.dialogue_ontology.keys()
 
         if not self.sessions:
-            saver = tf.train.Saver()
-            for slot in slots:
-                try:
-                    path_to_load = self.modeldir + slot
-                    self.sessions[slot] = tf.Session()
-                    saver.restore(self.sessions[slot], path_to_load)
-                except:
-                    print "Can't restore for slot", slot, " - from file", path_to_load
-                    return
+            with self.graph.as_default():
+                saver = tf.train.Saver()
+                for slot in slots:
+                    try:
+                        path_to_load = self.modeldir + slot
+                        self.sessions[slot] = tf.Session(graph=self.graph)
+                        saver.restore(self.sessions[slot], path_to_load)
+                    except:
+                        print "Can't restore for slot", slot, " - from file", path_to_load
+                        return
 
         prediction_dict = {}
         distribution_dict = {}

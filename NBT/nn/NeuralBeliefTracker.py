@@ -4,6 +4,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from NBT.nn.encoder import CNNEncoder
 
+
 def NeuralBeliefTracker(vector_dimension, label_count,
                  slot_vectors, value_vectors,
                  longest_utterance_length,
@@ -183,7 +184,7 @@ def NeuralBeliefTracker(vector_dimension, label_count,
         y_presoftmax = y_presoftmax + utterance_representations_delex
 
     # value-specific decoder:
-    if value_specific_decoder and False:
+    if value_specific_decoder:
         h_utterance_representation_for_full_softmax = CNNEncoder(utterance_representations_full, num_filters,
                                                                        vector_dimension, longest_utterance_length)
 

@@ -7150,7 +7150,7 @@
                     "transcript": "How about Indian food? Can I have the address and phone number?", 
                     "slu": [
                         {
-                            "act": "inform", 
+                            "act": "request",
                             "slots": [
                                 [
                                     "slot", 
@@ -14784,7 +14784,7 @@
                     "transcript": "Can I have the address and phone number please?", 
                     "slu": [
                         {
-                            "act": "inform", 
+                            "act": "request",
                             "slots": [
                                 [
                                     "slot", 
@@ -44927,7 +44927,7 @@
                             "slots": [
                                 [
                                     "pricerange", 
-                                    "expensive"
+                                    "dontcare"
                                 ]
                             ]
                         }
@@ -49514,7 +49514,7 @@
                             "slots": [
                                 [
                                     "food", 
-                                    "italian"
+                                    "dontcare"
                                 ]
                             ]
                         }, 
@@ -53338,7 +53338,7 @@
                             "slots": [
                                 [
                                     "food", 
-                                    "asian oriental"
+                                    "dontcare"
                                 ]
                             ]
                         }, 
