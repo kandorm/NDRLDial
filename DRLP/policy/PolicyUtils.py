@@ -3,7 +3,7 @@ import scipy.signal
 from DRLP.ontology import Ontology
 
 
-def flatten_belief(belief_state):
+def flatten_belief(belief_state, use_alter=False):
     policy_features = Ontology.global_ontology.get_system_requestable_slots() + ['name', 'request']
     flat_belief = []
     for feat in policy_features:
@@ -23,10 +23,16 @@ def flatten_belief(belief_state):
 
         flat_belief += add_feature
 
+    if use_alter:
+        try:
+            flat_belief.append(belief_state['user_intent']['reqalts'])
+        except KeyError:
+            flat_belief.append(0.)
+
     return flat_belief
 
 
-def get_state_dim():
+def get_state_dim(use_alter=False):
     dim = 0
     slots = Ontology.global_ontology.get_informable_slots()
     for slot in slots:
@@ -34,6 +40,9 @@ def get_state_dim():
         dim += 2    # for 'none' and 'dontcare'
 
     dim += Ontology.global_ontology.get_length_requestable_slots()
+
+    if use_alter:
+        dim += 1
 
     return dim
 

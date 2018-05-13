@@ -116,7 +116,13 @@ def labels(user_act, mact):
             for requested_slot, _ in act["slots"]:
                 requested_slots.append(requested_slot)
 
-    return informed_goals, denied_goals, requested_slots
+    # user intent
+    intent_list = []
+    act_types = [act["act"] for act in user_act]
+    if "reqalts" in act_types :
+        intent_list.append('reqalts')
+
+    return informed_goals, denied_goals, intent_list, requested_slots
 
 
 def Uacts(turn):
@@ -204,6 +210,10 @@ class RuleBasedTracker(BeliefTracker):
         belief['request'] = dict.fromkeys(Ontology.global_ontology.get_requestable_slots(), 0.0)
         for v in track['requested-slots']:
             belief['request'][v] = track['requested-slots'][v]
+
+        belief['user_intent'] = {}
+        for v in track['intent-label']:
+            belief['user_intent'][v] = track['intent-label'][v]
         return belief
 
 
@@ -215,7 +225,7 @@ class FocusTracker(RuleBasedTracker):
 
     def __init__(self):
         super(FocusTracker, self).__init__()
-        self.hyps = {"goal-labels": {}, "requested-slots": {}}
+        self.hyps = {"goal-labels": {}, "requested-slots": {}, 'intent-label': {}}
 
     def _add_turn(self, turn):
         """
@@ -234,9 +244,12 @@ class FocusTracker(RuleBasedTracker):
         slu_hyps = Uacts(turn)
 
         this_u = defaultdict(lambda: defaultdict(float))
+        user_intent = defaultdict(float)
         requested_slot_stats = defaultdict(float)
         for score, uact in slu_hyps:
-            informed_goals, denied_goals, requested = labels(uact, mact)
+            informed_goals, denied_goals, intent_list, requested = labels(uact, mact)
+            for u_intent in intent_list:
+                user_intent[u_intent] += score
             for slot in requested:
                 requested_slot_stats[slot] += score
             # goal_labels
@@ -276,6 +289,10 @@ class FocusTracker(RuleBasedTracker):
             new_p = x * prev_p + p
             hyps["requested-slots"][slot] = clip(new_p)
 
+        # user intent
+        for u_intent in user_intent:
+            hyps['intent-label'][u_intent] = user_intent[u_intent]
+
         self.hyps = hyps
         return self.hyps
 
@@ -284,7 +301,7 @@ class FocusTracker(RuleBasedTracker):
         Reset the hypotheses
         """
         super(FocusTracker, self).restart()
-        self.hyps = {"goal-labels": {}, "requested-slots": {}}
+        self.hyps = {"goal-labels": {}, "requested-slots": {}, 'intent-label': {}}
 
 
 def clip(x):

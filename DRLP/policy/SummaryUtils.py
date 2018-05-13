@@ -153,6 +153,20 @@ def getInformRequestedSlots(requested_slots, name, entities):
                 return _getInformNoneVenue({'name': name})
 
 
+def getInformAlternativeEntities(accepted_values, last_recommend, entities):
+    constraints = getConstraints(accepted_values)
+    if len(entities) == 0:
+        return _getInformNoneVenue(constraints)
+    else:
+        Settings.random.shuffle(entities)
+        for ent in entities:
+            name = ent['name']
+            if name != last_recommend:
+                return _getInformEntity(accepted_values, ent)
+
+        return _getInformNoMoreVenues(accepted_values, entities)
+
+
 def _convert_feats_to_str(feats):
     result = []
     for slot in feats:

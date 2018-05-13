@@ -6,6 +6,7 @@ from utils.dact import DiaAct
 from NBT.tracker.net import Tracker
 from DRLP.Model import DRLP
 from KB.KBManager import KBManager
+from SemI.RegexSemI import RegexSemI
 from SemO.BasicSemOMethod import BasicSemO
 
 from ConfigParser import SafeConfigParser
@@ -25,6 +26,7 @@ class NDRLDial(object):
         self.policy_config = parser.get('config', 'policy_config')
 
         self.tracker = Tracker(self.tracker_config)
+        self.semi = RegexSemI()
         self.policy_manager = DRLP(self.policy_config)
         # Connect to the knowledge base
         self.kb_manager = KBManager()
@@ -171,10 +173,13 @@ class NDRLDial(object):
             constraints[slot] = prediction_dict[slot]
         entities = self.kb_manager.entity_by_features(constraints)
 
-        # 3. Policy -- Determine system act/response type: DiaAct
+        # 3. Add user intent into belief state
+        distribution_dict['user_intent'] = self.semi.decode(str(user_utt).lower())
+
+        # 4. Policy -- Determine system act/response type: DiaAct
         sys_act = self.policy_manager.act_on(distribution_dict, entities)
 
-        # 4. Generate natural language
+        # 5. Generate natural language
         nl = self.generator.generate(str(sys_act))
 
         if not isinstance(sys_act, DiaAct):

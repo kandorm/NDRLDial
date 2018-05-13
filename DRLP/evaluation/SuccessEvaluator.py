@@ -121,6 +121,8 @@ class ObjectiveSuccessEvaluator(Evaluator):
 
         self.penalise_all_turns = True  # We give -1 each turn. Note that this is done thru this boolean
         self.reward_venue_recommended = 0
+        self.reward_venue_alternatives = 10
+        self.penalty_venue_alternatives = 5
         self.wrong_venue_penalty = 0
         self.not_mentioned_value_penalty = 0
         self.successReward = 20
@@ -130,6 +132,10 @@ class ObjectiveSuccessEvaluator(Evaluator):
             self.penalise_all_turns = Settings.config.getboolean('eval', 'penaliseallturns')
         if Settings.config.has_option('eval', 'rewardvenuerecommended'):
             self.reward_venue_recommended = Settings.config.getint('eval', 'rewardvenuerecommended')
+        if Settings.config.has_option('eval', 'rewardvenuealternatives'):
+            self.reward_venue_alternatives = Settings.config.getint('eval', 'rewardvenuealternatives')
+        if Settings.config.has_option('eval', 'penaltyvenuealternatives'):
+            self.penalty_venue_alternatives = Settings.config.getint('eval', 'penaltyvenuealternatives')
         if Settings.config.has_option('eval', 'wrongvenuepenalty'):
             self.wrong_venue_penalty = Settings.config.getint('eval', 'wrongvenuepenalty')
         if Settings.config.has_option('eval', 'notmentionedvaluepenalty'):
@@ -182,16 +188,22 @@ class ObjectiveSuccessEvaluator(Evaluator):
                 name = sys_act.get_value('name', negate=False)
                 if name not in ['none', None]:
                     # Venue is recommended.
-                    self.last_venue_recommend = name
                     is_valid_venue = self._is_valid_venue(name, prev_consts)
                     if is_valid_venue:
                         # Success except if the next user action is reqalts.
                         if user_act.act != 'reqalts':
                             self.venue_recommended = True  # Correct venue is recommended.
+                        else:
+                            if self.last_venue_recommend != name:
+                                reward += self.reward_venue_alternatives
+                            else:
+                                reward -= self.penalty_venue_alternatives
                     else:
                         # Previous venue did not match.
                         self.venue_recommended = False
                         reward -= self.wrong_venue_penalty
+
+                    self.last_venue_recommend = name
 
                 # If system inform(name=none) but it was not right decision based on wrong values.
                 if name == 'none' and sys_act.has_conflicting_value(prev_consts):

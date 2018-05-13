@@ -12,6 +12,7 @@ User Acts
  -- negate(slot=value)
  -- deny(slot1=value1, slot1=value2)
  -- bye()
+ -- reqalts()
 '''
 
 '''
@@ -164,7 +165,7 @@ class UMHdcSim(object):
 
         # DEFAULTS:
         self.answer_req_always = True
-        self.use_new_goal_scenarios = False
+        self.use_new_goal_scenarios = True
         self.sampleDecisiconProbs = False
         self.patience_old_style = False
         self.old_style_parameter_sampling = True
@@ -185,7 +186,7 @@ class UMHdcSim(object):
                                     'NullResp': 0.0,
                                     'OverruleCorrection': 0.1,
                                     'ConfirmRandomConstr': 0.1,
-                                    'ReqAltsAfterVenRec1': 0.143,
+                                    'ReqAltsAfterVenRec1': 1.0,
                                     'ReqAltsAfterVenRec2': 0.143,
                                     'NewRequestResp1': 0.2,
                                     'NewRequestResp2': 0.2,

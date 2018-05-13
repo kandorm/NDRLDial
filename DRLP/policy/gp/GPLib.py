@@ -604,14 +604,14 @@ class GPState(State):
     Definition of state representation needed for GP-SARSA algorithm
     Main requirement for the ability to compute kernel function over two states
     """
-    def __init__(self, belief_state, replace=None):
+    def __init__(self, belief_state, replace=None, use_alter=False):
         super(GPState, self).__init__(belief_state)
         self.is_abstract = True if replace is not None and len(replace) else False
         self.b_state = {}
         self.belief_state_vec = None
 
         if belief_state is not None:
-            self.b_state = self._extract_simple_belief(belief_state, replace)
+            self.b_state = self._extract_simple_belief(belief_state, replace, use_alter)
         self.belief_state_vec = self._slow_to_fast_belief(self.b_state)
 
     def to_string(self):
@@ -627,7 +627,7 @@ class GPState(State):
                     res += str(elem) + " "
         return res
 
-    def _extract_simple_belief(self, belief_state, replace=None):
+    def _extract_simple_belief(self, belief_state, replace=None, use_alter=False):
         """
         From the belief state extracts requested slots, name, goal for each slot.
         Sets self._bstate
@@ -640,6 +640,12 @@ class GPState(State):
                     if replace is not None and len(replace) > 0:
                         cur_slot = replace[cur_slot]
                     _bstate['hist_' + cur_slot] = self._extract_single_value(belief_state[elem][slot])
+            elif elem == 'user_intent':
+                if use_alter:
+                    try:
+                        _bstate['user_intent'] = [belief_state['user_intent']['reqalts']]
+                    except KeyError:
+                        _bstate['user_intent'] = [0.]
             else:
                 if elem == 'name':
                     _bstate[elem] = self._extract_belief_with_other(belief_state['name'])

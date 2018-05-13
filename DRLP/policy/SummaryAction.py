@@ -18,7 +18,7 @@ class SummaryAction(object):
 
         self.inform_mask = True
         self.request_mask = True
-        self.inform_count_accepted = 3
+        self.inform_count_accepted = 1
 
         if Settings.config.has_option("summaryacts", "informmask"):
             self.inform_mask = Settings.config.getboolean('summaryacts', 'informmask')
@@ -30,14 +30,15 @@ class SummaryAction(object):
         if not empty:
             slots = Ontology.global_ontology.get_system_requestable_slots()
             for slot in slots:
-                #self.action_names.append("request_" + slot)
+                self.action_names.append("request_" + slot)
                 #self.action_names.append("confirm_" + slot)
                 if confreq:
                     for slot2 in slots:
                         self.action_names.append("confreq_" + slot + "_" + slot2)
 
             self.action_names += ["inform",
-                                  "inform_byname"]
+                                  "inform_byname",
+                                  'inform_alternatives']
 
     # MASK OVER SUMMARY ACTION SET
     # ------------------------------------------------------------------------------------
@@ -57,7 +58,11 @@ class SummaryAction(object):
             mask_action = False
 
             if action == "inform":
-                pass
+                count_accepted = len(SummaryUtils.getTopBeliefs(belief_state))
+                if count_accepted < self.inform_count_accepted:
+                    mask_action = True
+                if mask_action and self.inform_mask:
+                    nonexec.append(action)
 
             elif action == "inform_byname":
                 top_name = SummaryUtils.getTopBelief(belief_state['name'])[0]
@@ -67,6 +72,13 @@ class SummaryAction(object):
                     result = [ent for ent in entities if ent['name'] == top_name]
                     if len(result) == 0:
                         mask_action = True
+                if mask_action and self.inform_mask:
+                    nonexec.append(action)
+
+            elif action == 'inform_alternatives':
+                top_name = SummaryUtils.getTopBelief(belief_state['name'])[0]
+                if top_name == 'none':
+                    mask_action = True
                 if mask_action and self.inform_mask:
                     nonexec.append(action)
 
@@ -128,6 +140,8 @@ class SummaryAction(object):
             output = self.getInformByConstraints(belief_state, entities)
         elif action == "inform_byname":
             output = self.getInformByName(belief_state, entities)
+        elif action == "inform_alternatives":
+            output = self.getInformAlternatives(belief_state, entities)
         else:
             output = ""
         return output
@@ -162,3 +176,8 @@ class SummaryAction(object):
         requested_slots = SummaryUtils.getRequestedSlots(belief_state)
         name = SummaryUtils.getTopBelief(belief_state['name'])[0]
         return SummaryUtils.getInformRequestedSlots(requested_slots, name, entities)
+
+    def getInformAlternatives(self, belief_state, entities):
+        last_recommend = SummaryUtils.getTopBelief(belief_state['name'])[0]
+        accepted_values = SummaryUtils.getTopBeliefs(belief_state)
+        return SummaryUtils.getInformAlternativeEntities(accepted_values, last_recommend, entities)

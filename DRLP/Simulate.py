@@ -39,8 +39,6 @@ class SimulationSystem(object):
             # user action type:~utils.dact.DiaAct
             user_act = self.simulator.act_on(sys_act)
 
-            print user_act
-
             if debug:
                 print sys_act
                 print user_act
