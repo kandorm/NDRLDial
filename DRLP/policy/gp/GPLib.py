@@ -1,13 +1,12 @@
 import os
 import math
-import copy
 import scipy.stats
 import pickle as pkl
 import numpy as np
 from DRLP.utils import utils
 from DRLP.policy.Policy import State, Action, TerminalState, TerminalAction
 from DRLP.utils import Settings
-from DRLP.ontology import Ontology
+from DRLP.policy import PolicyUtils
 
 
 class LearnerInterface(object):
@@ -604,15 +603,15 @@ class GPState(State):
     Definition of state representation needed for GP-SARSA algorithm
     Main requirement for the ability to compute kernel function over two states
     """
-    def __init__(self, belief_state, replace=None, use_alter=False):
+    def __init__(self, belief_state, replace=None):
         super(GPState, self).__init__(belief_state)
         self.is_abstract = True if replace is not None and len(replace) else False
         self.b_state = {}
         self.belief_state_vec = None
 
         if belief_state is not None:
-            self.b_state = self._extract_simple_belief(belief_state, replace, use_alter)
-        self.belief_state_vec = self._slow_to_fast_belief(self.b_state)
+            self.b_state = PolicyUtils.extract_simple_belief(belief_state, replace)
+        self.belief_state_vec = PolicyUtils.belief2vec(self.b_state)
 
     def to_string(self):
         """
@@ -626,85 +625,6 @@ class GPState(State):
                 for elem in self.b_state[slot]:
                     res += str(elem) + " "
         return res
-
-    def _extract_simple_belief(self, belief_state, replace=None, use_alter=False):
-        """
-        From the belief state extracts requested slots, name, goal for each slot.
-        Sets self._bstate
-        """
-        _bstate = {}
-        for elem in belief_state.keys():
-            if elem == 'request':
-                for slot in belief_state[elem]:
-                    cur_slot = slot
-                    if replace is not None and len(replace) > 0:
-                        cur_slot = replace[cur_slot]
-                    _bstate['hist_' + cur_slot] = self._extract_single_value(belief_state[elem][slot])
-            elif elem == 'user_intent':
-                if use_alter:
-                    try:
-                        _bstate['user_intent'] = [belief_state['user_intent']['reqalts']]
-                    except KeyError:
-                        _bstate['user_intent'] = [0.]
-            else:
-                if elem == 'name':
-                    _bstate[elem] = self._extract_belief_with_other(belief_state['name'])
-                else:
-                    cur_slot = elem
-                    if replace is not None and len(replace) > 0:
-                        cur_slot = replace[elem]
-                    _bstate['goal_' + cur_slot] = self._extract_belief_with_other(belief_state[elem])
-
-                    num_additional_slot = 2
-                    if len(_bstate['goal_' + cur_slot]) != \
-                            Ontology.global_ontology.get_length_informable_slot(elem) + num_additional_slot:
-                        print _bstate['goal_' + cur_slot]
-                        exit('Different number of values for slot' + cur_slot + ' ' +
-                             str(len(_bstate['goal_' + cur_slot])) + ' in ontology ' +
-                             str(Ontology.global_ontology.get_length_informable_slot(elem) + num_additional_slot))
-        return _bstate
-
-    def _extract_single_value(self, val):
-        """
-        For a probability p returns a list  [p,1-p]
-        """
-        return [val, 1-val]
-
-    def _extract_belief_with_other(self, val_and_belief, sort=True):
-        """
-        Copies a belief vector, computes the remaining belief, appends it and return its sorted value.
-        The first one is the belief of 'none' and the others(include 'dontcare') arranged in descending order.
-        :return: the sorted belief state value vector
-        """
-        v_b = copy.deepcopy(val_and_belief)
-        res = []
-
-        if 'none' not in v_b:
-            res.append(1.0 - sum(v_b.values()))     # append the none probability
-        else:
-            res.append(v_b['none'])
-            del v_b['none']
-
-        # ensure that all goal slots have dontcare entry for GP belief representation
-        if 'dontcare' not in v_b:
-            v_b['dontcare'] = 0.0
-
-        if sort:
-            res.extend(sorted(v_b.values(), reverse=True))
-        else:
-            res.extend(v_b.values())
-
-        return res
-
-    def _slow_to_fast_belief(self, belief_dic):
-        """
-        Converts dictionary format to numpy vector format.
-        Ordered by the key of belief_dic.
-        """
-        values = np.array([])
-        for slot in sorted(belief_dic.keys()):
-            values = np.concatenate((values, np.array(belief_dic[slot])))
-        return values
 
     def __str__(self):
         return self.to_string()

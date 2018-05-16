@@ -12,6 +12,8 @@ class DataReader(object):
         data = json.load(codecs.open(corpus_file, 'r', 'utf-8'))
         corpus = []
 
+        data = data[:len(data)/5]
+
         for dialog in data:
             user_transcript = []
             goal = {'request': []}

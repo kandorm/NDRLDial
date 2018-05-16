@@ -121,7 +121,7 @@ def getInformByConstraints(constraints, entities):
         return _getInformEntity(constraints, ret_ent)
 
 
-def getInformRequestedSlots(requested_slots, name, entities):
+def getInformRequestedSlots(requested_slots, name, constraints, entities):
     """
     Informs about the requested slots from the last informed venue of form the venue informed by name
     The dialogue act for summary action 'inform_byname'.
@@ -137,8 +137,7 @@ def getInformRequestedSlots(requested_slots, name, entities):
             ent = Settings.random.choice(entities)
             return _getInformRequestedSlotsForEntity(requested_slots, ent)
         else:
-            print 'getInformRequestedSlots-> name is none and no entities'
-            return _getInformNoneVenue({'name': name})
+            return _getInformNoneVenue(constraints)
 
     else:
         result = [ent for ent in entities if ent['name'] == name]
@@ -150,10 +149,10 @@ def getInformRequestedSlots(requested_slots, name, entities):
                 ent = Settings.random.choice(entities)
                 return _getInformRequestedSlotsForEntity(requested_slots, ent)
             else:
-                return _getInformNoneVenue({'name': name})
+                return _getInformNoneVenue(constraints)
 
 
-def getInformAlternativeEntities(accepted_values, last_recommend, entities):
+def getInformAlternativeEntities(accepted_values, recommended_list, entities):
     constraints = getConstraints(accepted_values)
     if len(entities) == 0:
         return _getInformNoneVenue(constraints)
@@ -161,7 +160,7 @@ def getInformAlternativeEntities(accepted_values, last_recommend, entities):
         Settings.random.shuffle(entities)
         for ent in entities:
             name = ent['name']
-            if name != last_recommend:
+            if name not in recommended_list:
                 return _getInformEntity(accepted_values, ent)
 
         return _getInformNoMoreVenues(accepted_values, entities)

@@ -119,7 +119,7 @@ class ObjectiveSuccessEvaluator(Evaluator):
     def __init__(self):
         super(ObjectiveSuccessEvaluator, self).__init__()
 
-        self.penalise_all_turns = True  # We give -1 each turn. Note that this is done thru this boolean
+        self.penalise_all_turns = 1  # We give -1 each turn. Note that this is done thru this boolean
         self.reward_venue_recommended = 0
         self.reward_venue_alternatives = 10
         self.penalty_venue_alternatives = 5
@@ -129,7 +129,7 @@ class ObjectiveSuccessEvaluator(Evaluator):
         self.failPenalty = 0
 
         if Settings.config.has_option('eval', 'penaliseallturns'):
-            self.penalise_all_turns = Settings.config.getboolean('eval', 'penaliseallturns')
+            self.penalise_all_turns = Settings.config.getint('eval', 'penaliseallturns')
         if Settings.config.has_option('eval', 'rewardvenuerecommended'):
             self.reward_venue_recommended = Settings.config.getint('eval', 'rewardvenuerecommended')
         if Settings.config.has_option('eval', 'rewardvenuealternatives'):
@@ -147,7 +147,6 @@ class ObjectiveSuccessEvaluator(Evaluator):
 
         self.user_goal = None
         self.venue_recommended = False
-        self.last_venue_recommend = None
         self.DM_history = None
         self.mentioned_values = {}  # {slot: set(values), ...}
         sys_req_slots = Ontology.global_ontology.get_system_requestable_slots()
@@ -157,7 +156,6 @@ class ObjectiveSuccessEvaluator(Evaluator):
     def restart(self):
         super(ObjectiveSuccessEvaluator, self).restart()
         self.venue_recommended = False
-        self.last_venue_recommend = None
 
     def _get_turn_reward(self, turn_info):
         """
@@ -194,10 +192,13 @@ class ObjectiveSuccessEvaluator(Evaluator):
                         if user_act.act != 'reqalts':
                             self.venue_recommended = True  # Correct venue is recommended.
                         else:
-                            if self.last_venue_recommend != name:
-                                reward += self.reward_venue_alternatives
-                            else:
-                                reward -= self.penalty_venue_alternatives
+                            if 'state' in turn_info:
+                                belief_state = turn_info['state']
+                                recommended_list = belief_state['name']
+                                if name not in recommended_list:
+                                    reward += self.reward_venue_alternatives
+                                else:
+                                    reward -= self.penalty_venue_alternatives
                     else:
                         # Previous venue did not match.
                         self.venue_recommended = False

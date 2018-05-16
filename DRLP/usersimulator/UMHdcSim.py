@@ -484,7 +484,6 @@ class UMHdcSim(object):
         if not goal.contains_slot_const(slot):
             # If slot is not in the goal, get the correct value for it.
             print 'Slot %s in the given system act %s is not found in the user goal.' % (slot, str(sys_act))
-            # random_val = Ontology.global_ontology.getRandomValueForSlot(self.dstring, slot=slot)
             goal.add_const(slot, 'dontcare')
             self.agenda.push(DiaAct('inform(%s="%s")' % (slot, 'dontcare')))
         else:
@@ -628,7 +627,7 @@ class UMHdcSim(object):
                 else:
                     additional_slots = [requested_slot]
                     for slot in additional_slots:
-                        rval = Ontology.global_ontology.getRandomValueForSlot(slot=slot)
+                        rval = Ontology.global_ontology.get_random_value_for_slot(slot=slot)
                         self.agenda.push(DiaAct('inform(%s="%s")' % (slot, rval)))
             else:
                 goal.add_const(slot=requested_slot, value=random_val)
@@ -754,10 +753,11 @@ class UMHdcSim(object):
                             goal.add_prev_used(relax_slot, relax_value)  # is this necessary?
                         else:
                             # Set it to a valid value for this slot that is different from the previous one.
-                            relax_value = Ontology.global_ontology.getRandomValueForSlot(slot=relax_slot,
-                                                                                         nodontcare=True,
-                                                                                         notthese=goal.prev_slot_values[
-                                                                                             relax_slot])
+                            relax_value = Ontology.global_ontology.get_random_value_for_slot(slot=relax_slot,
+                                                                                             no_dontcare=True,
+                                                                                             no_these=
+                                                                                             goal.prev_slot_values[
+                                                                                                 relax_slot])
                             goal.add_prev_used(relax_slot, relax_value)
 
                         goal.replace_const(relax_slot, relax_value)

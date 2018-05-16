@@ -38,7 +38,6 @@ class A2CPolicy(Policy):
 
         self.importance_sampling = False
         self.gamma = 1.0
-        self.use_alter = False  # add user reqalts intent into the belief state
 
         if Settings.config.has_option('general', 'seed'):
             self.random_seed = Settings.config.getint('general', 'seed')
@@ -71,10 +70,7 @@ class A2CPolicy(Policy):
         if Settings.config.has_option('dqnpolicy', 'gamma'):
             self.gamma = Settings.config.getfloat('dqnpolicy', 'gamma')
 
-        if Settings.config.has_option('policy', 'use_alter'):
-            self.use_alter = Settings.config.getboolean('policy', 'use_alter')
-
-        self.state_dim = PolicyUtils.get_state_dim(self.use_alter)
+        self.state_dim = PolicyUtils.get_state_dim()
         self.action_dim = len(self.actions.action_names)
 
         self.mu_prob = 0.  # behavioral policy
@@ -162,12 +158,12 @@ class A2CPolicy(Policy):
         if isinstance(state, TerminalState):
             return [0] * self.state_dim, action
         else:
-            flat_belief = PolicyUtils.flatten_belief(state, self.use_alter)
+            flat_belief = PolicyUtils.flatten_belief(state)
             return flat_belief, action
 
     def next_action(self, belief_state, entities):
 
-        belief_vec = PolicyUtils.flatten_belief(belief_state, self.use_alter)
+        belief_vec = PolicyUtils.flatten_belief(belief_state)
         exec_mask = self.actions.get_executable_mask(belief_state, entities)
 
         action_prob, value = self.a2c.predict_action_value(np.reshape(belief_vec, (1, len(belief_vec))))

@@ -107,5 +107,6 @@ class BeliefTracker(object):
                 belief[slot] = dict.fromkeys(inform_slot_values + ['dontcare'], 0.0)
             belief[slot]['none'] = 1.0
         belief['request'] = dict.fromkeys(Ontology.global_ontology.get_requestable_slots(), 0.0)
-        belief['user_intent'] = {}
+        belief['user_intent'] = dict.fromkeys(Ontology.global_ontology.get_user_intent(), 0.0)
+        belief['name'] = []
         return belief

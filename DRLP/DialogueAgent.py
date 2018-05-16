@@ -38,6 +38,7 @@ class DialogueAgent(object):
 
         self.ending_dialogue = False
         self.cur_turn = 0
+        self.recommended_list = []
 
         self.bs_tracker.restart()
         self.policy_manager.restart()
@@ -88,12 +89,26 @@ class DialogueAgent(object):
             constraints[slot] = max(belief_state[slot], key=belief_state[slot].get)
         entities = KnowledgeBase.global_kb.entity_by_features(constraints)
 
-        # 3. Policy -- Determine system act/response type: DiaAct
+        # 3. Add recommended list into belief state
+        belief_state['name'] = self.recommended_list
+
+        # 4. Policy -- Determine system act/response type: DiaAct
         sys_act = self.policy_manager.act_on(belief_state, entities)
 
-        # 4. Add system recommend restaurant to the name slot in belief state, this was done by focus belief tracker.
+        # 5. Add system recommend restaurant to the recommended list
+        if not isinstance(sys_act, DiaAct):
+            sys_act = DiaAct(str(sys_act))
 
-        # 5. EVALUATION: - record the system action
+        if sys_act.act == 'inform':
+            name = sys_act.get_value('name', negate=False)
+            if name not in ['none', None]:
+                try:
+                    self.recommended_list.remove(name)
+                except:
+                    pass
+                self.recommended_list.append(name)
+
+        # 6. EVALUATION: - record the system action
         self._evaluate_agents_turn(simulated_user, sys_act, belief_state)
 
         return sys_act

@@ -20,12 +20,6 @@ Belief State Representation
                             u'value2': 0.0,
                             ......
                          },
-    u'name': {
-                'none': 1.0,
-                u'value1': 0.0,
-                u'value2': 0.0,
-                ......
-             }
     'request': {
                     u'infromable_slot1': 0.0,
                     u'informable_slot2': 0.0,
@@ -34,6 +28,10 @@ Belief State Representation
                     u'requestable_slot2': 0.0,
                     u'name': 0.0
                 }
+    'user_intent': {
+                    'reqalts': 0.0
+                    },
+    'name': []
 }
 """
 
@@ -211,9 +209,11 @@ class RuleBasedTracker(BeliefTracker):
         for v in track['requested-slots']:
             belief['request'][v] = track['requested-slots'][v]
 
-        belief['user_intent'] = {}
+        belief['user_intent'] = dict.fromkeys(Ontology.global_ontology.get_user_intent(), 0.0)
         for v in track['intent-label']:
             belief['user_intent'][v] = track['intent-label'][v]
+
+        belief['name'] = prev_belief['name']
         return belief
 
 
@@ -290,6 +290,7 @@ class FocusTracker(RuleBasedTracker):
             hyps["requested-slots"][slot] = clip(new_p)
 
         # user intent
+        hyps['intent-label'] = {}
         for u_intent in user_intent:
             hyps['intent-label'][u_intent] = user_intent[u_intent]
 

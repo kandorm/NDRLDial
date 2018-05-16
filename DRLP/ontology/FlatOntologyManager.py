@@ -21,6 +21,12 @@ class FlatOntologyManager(object):
     def get_type(self):
         return self.ontology['type']
 
+    def get_user_intent(self):
+        return self.ontology['user_intent']
+
+    def get_length_user_intent(self):
+        return len(self.ontology['user_intent'])
+
     def get_requestable_slots(self):
         return copy.copy(self.ontology['requestable'])
 

@@ -18,7 +18,6 @@ class GPPolicy(Policy):
         self.slot_abstraction_file = 'DRLP/policy/slot_abstractions/CamRestaurants.json'
         self.abstract_slots = False
         self.unabstract_slots = False
-        self.use_alter = False
 
         if Settings.config.has_option('gppolicy', "kernel"):
             self.kernel_type = Settings.config.get('gppolicy', "kernel")
@@ -33,9 +32,6 @@ class GPPolicy(Policy):
         if not self.abstract_slots:
             if Settings.config.has_option('gppolicy', "unabstractslots"):
                 self.unabstract_slots = Settings.config.getboolean('gppolicy', "unabstractslots")
-
-        if Settings.config.has_option('policy', 'use_alter'):
-            self.use_alter = Settings.config.getboolean('policy', 'use_alter')
 
         # Learning algorithm:
         self.learner = GPSARSA(in_policy_file, out_policy_file, learning=self.learning)
@@ -74,7 +70,7 @@ class GPPolicy(Policy):
         """
         none_executable_actions = self.actions.get_none_executable(belief_state, entities)
 
-        cur_state = GPState(belief_state, replace=self.replace, use_alter=self.use_alter)
+        cur_state = GPState(belief_state, replace=self.replace)
         executable = self._create_executable(none_executable_actions)
         if len(executable) < 1:
             exit("No executable actions")
@@ -114,7 +110,7 @@ class GPPolicy(Policy):
             if isinstance(state, TerminalState):
                 c_state = TerminalGPState()
             else:
-                c_state = GPState(state, replace=self.replace, use_alter=self.use_alter)
+                c_state = GPState(state, replace=self.replace)
 
         if not isinstance(action, GPAction):
             if isinstance(action, TerminalAction):

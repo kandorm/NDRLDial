@@ -41,7 +41,7 @@ class NDRLDial(object):
         self.corpus = self.reader.corpus
 
         self.requestable_slots = self.ontology['requestable']
-        self.name_values = self.ontology['informable']['name'] + ['none']
+        self.user_intent = self.ontology['user_intent']
 
     def test(self):
 
@@ -163,8 +163,7 @@ class NDRLDial(object):
         if 'name' in belief_state:
             distribution_dict['name'] = belief_state['name']
         else:
-            distribution_dict['name'] = dict.fromkeys(self.name_values, 0.0)
-            distribution_dict['name']['none'] = 1.0
+            distribution_dict['name'] = []
 
         # 2.Query Knowledge base
         constraints = {}
@@ -174,7 +173,11 @@ class NDRLDial(object):
         entities = self.kb_manager.entity_by_features(constraints)
 
         # 3. Add user intent into belief state
-        distribution_dict['user_intent'] = self.semi.decode(str(user_utt).lower())
+        intent_predicted = self.semi.decode(str(user_utt).lower())
+        distribution_dict['user_intent'] = dict.fromkeys(self.user_intent, 0.0)
+        for slot in intent_predicted:
+            if slot in distribution_dict['user_intent']:
+                distribution_dict['user_intent'][slot] = intent_predicted[slot]
 
         # 4. Policy -- Determine system act/response type: DiaAct
         sys_act = self.policy_manager.act_on(distribution_dict, entities)
@@ -188,9 +191,11 @@ class NDRLDial(object):
         if sys_act.act == 'inform':
             name = sys_act.get_value('name', negate=False)
             if name not in ['none', None]:
-                name_slot = dict.fromkeys(self.name_values, 0.0)
-                name_slot[name] = 1.0
-                distribution_dict['name'] = name_slot
+                try:
+                    distribution_dict['name'].remove(name)
+                except:
+                    pass
+                distribution_dict['name'].append(name)
 
         response['belief_state'] = distribution_dict
         response['last_sys_act'] = str(sys_act)
