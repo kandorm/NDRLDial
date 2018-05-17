@@ -583,6 +583,7 @@ inform(name=none,other=true,name=$X,$Y=$O,$Z=$P,$W=$R,$Q=$T,$G=$H) : "I am sorry
 inform(name=none,other=true,name=$X,$Y=$O,$Z=$P,$W=$R,$Q=$T,$G=$H,$B=$D) : "I am sorry but there is no place other than $X %$Y_str($O), %$Z_str($P), %$W_str($R), %$Q_str($T), %$G_str($H) and %$B_str($D).";
 
 
+inform(name=none) : "I am sorry but there is no restaurant.";
 inform(name=none,type=$U) : "I am sorry but there is no $U.";
 inform(name=none,type=$U,$Y=$O) : "I am sorry but there is no $U %$Y_str($O).";
 inform(name=none,type=$U,$Y=$O,$Z=$P) : "I am sorry but there is no $U %$Y_str($O) and %$Z_str($P).";

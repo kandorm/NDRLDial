@@ -104,11 +104,7 @@ class SummaryAction(object):
                     nonexec.append(action)
 
             elif "request_" in action:
-                top_value = SummaryUtils.getTopBelief(belief_state[action.split("_")[1]])[0]
-                if top_value != 'none':
-                    mask_action = True
-                if mask_action and self.request_mask:
-                    nonexec.append(action)
+                pass
 
             elif "confirm_" in action:
                 slot_summary = array_slot_summary[action.split("_")[1]]

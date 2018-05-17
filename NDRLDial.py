@@ -25,9 +25,9 @@ class NDRLDial(object):
         self.tracker_config = parser.get('config', 'tracker_config')
         self.policy_config = parser.get('config', 'policy_config')
 
-        self.tracker = Tracker(self.tracker_config)
         self.semi = RegexSemI()
         self.policy_manager = DRLP(self.policy_config)
+        self.tracker = Tracker(self.tracker_config)
         # Connect to the knowledge base
         self.kb_manager = KBManager()
         self.generator = BasicSemO()

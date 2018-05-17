@@ -36,6 +36,7 @@ class Evaluator(object):
         return final_reward
 
     def restart(self):
+        self.outcome = False
         self.num_turns = 0
         self.total_reward = 0
 
@@ -119,10 +120,10 @@ class ObjectiveSuccessEvaluator(Evaluator):
     def __init__(self):
         super(ObjectiveSuccessEvaluator, self).__init__()
 
-        self.penalise_all_turns = 1  # We give -1 each turn. Note that this is done thru this boolean
+        self.penalise_all_turns = 1  # We give -1 each turn.
         self.reward_venue_recommended = 0
-        self.reward_venue_alternatives = 10
-        self.penalty_venue_alternatives = 5
+        self.reward_venue_alternatives = 0
+        self.penalty_venue_alternatives = 0
         self.wrong_venue_penalty = 0
         self.not_mentioned_value_penalty = 0
         self.successReward = 20
@@ -147,7 +148,6 @@ class ObjectiveSuccessEvaluator(Evaluator):
 
         self.user_goal = None
         self.venue_recommended = False
-        self.DM_history = None
         self.mentioned_values = {}  # {slot: set(values), ...}
         sys_req_slots = Ontology.global_ontology.get_system_requestable_slots()
         for slot in sys_req_slots:
@@ -203,8 +203,6 @@ class ObjectiveSuccessEvaluator(Evaluator):
                         # Previous venue did not match.
                         self.venue_recommended = False
                         reward -= self.wrong_venue_penalty
-
-                    self.last_venue_recommend = name
 
                 # If system inform(name=none) but it was not right decision based on wrong values.
                 if name == 'none' and sys_act.has_conflicting_value(prev_consts):

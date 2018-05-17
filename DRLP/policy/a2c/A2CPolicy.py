@@ -26,7 +26,7 @@ class A2CPolicy(Policy):
         self.learning_rate = 0.001
         self.tau = 0.001
         self.h1_size = 130
-        self.h2_size = 130
+        self.h2_size = 50
         self.replay_type = 'vanilla'
         self.buffer_size = 1000
         self.batch_size = 32

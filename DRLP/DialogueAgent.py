@@ -57,11 +57,34 @@ class DialogueAgent(object):
         # 1. Belief state tracking
         belief_state = self.bs_tracker.update_belief_state(last_act=last_sys_act, obs=[])
 
-        # 2. Policy -- Determine system act/response
-        sys_act = self.policy_manager.act_on(belief_state, [])
+        # 2.Query Knowledge base
+        constraints = {}
+        slots = Ontology.global_ontology.get_system_requestable_slots()
+        for slot in slots:
+            constraints[slot] = max(belief_state[slot], key=belief_state[slot].get)
+        entities = KnowledgeBase.global_kb.entity_by_features(constraints)
 
-        # EVALUATION: - record the system action
-        self._evaluate_agents_turn(simulated_user, sys_act)
+        # 3. Add recommended list into belief state
+        belief_state['name'] = self.recommended_list
+
+        # 4. Policy -- Determine system act/response
+        sys_act = self.policy_manager.act_on(belief_state, entities)
+
+        # 5. Add system recommend restaurant to the recommended list
+        if not isinstance(sys_act, DiaAct):
+            sys_act = DiaAct(str(sys_act))
+
+        if sys_act.act == 'inform':
+            name = sys_act.get_value('name', negate=False)
+            if name not in ['none', None]:
+                try:
+                    self.recommended_list.remove(name)
+                except:
+                    pass
+                self.recommended_list.append(name)
+
+        # 6. EVALUATION: - record the system action
+        self._evaluate_agents_turn(simulated_user, sys_act, belief_state)
 
         return sys_act
 

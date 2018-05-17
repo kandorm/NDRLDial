@@ -51,6 +51,8 @@ class DataBaseSQLite(object):
                 for cond in constraints:
                     if cond.op == '=' and cond.val == 'dontcare':
                         continue    # NB assume no != 'dontcare' case occurs - so not handling
+                    if cond.val in ['none', None]:
+                        continue
                     if cond.op == '!=' and cond.val != 'dontcare':
                         bits.append(cond.slot + '!= ?')
                     else:
@@ -58,7 +60,7 @@ class DataBaseSQLite(object):
                     values.append(cond.val)
             elif isinstance(constraints, dict):
                 for slot, value in constraints.iteritems():
-                    if value and value not in ['dontcare', 'none']:
+                    if value and value not in ['dontcare', 'none', None]:
                         bits.append(slot + '= ?  COLLATE NOCASE')
                         values.append(value)
 

@@ -8,7 +8,7 @@ def flatten_belief(belief_state):
     b_state = {}
     if belief_state is not None:
         b_state = extract_simple_belief(belief_state)
-    belief_state_vec = self._slow_to_fast_belief(b_state)
+    belief_state_vec = belief2vec(b_state)
 
     return belief_state_vec
 
@@ -94,17 +94,16 @@ def _extract_belief_with_other(val_and_belief, sort=True):
     return res
 
 
-def get_state_dim(use_alter=False):
+def get_state_dim():
     dim = 0
     slots = Ontology.global_ontology.get_informable_slots()
     for slot in slots:
         dim += Ontology.global_ontology.get_length_informable_slot(slot)
         dim += 2    # for 'none' and 'dontcare'
 
-    dim += Ontology.global_ontology.get_length_requestable_slots()
+    dim += Ontology.global_ontology.get_length_requestable_slots() * 2
 
-    if use_alter:
-        dim += 1
+    dim += Ontology.global_ontology.get_length_user_intent() * 2
 
     return dim
 
