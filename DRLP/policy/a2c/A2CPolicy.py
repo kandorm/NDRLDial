@@ -15,36 +15,46 @@ class A2CPolicy(Policy):
 
     def __init__(self, learning, in_policy_file, out_policy_file):
         super(A2CPolicy, self).__init__(learning)
-        self.summary_act = None
-
-        tf.reset_default_graph()
 
         self.in_policy_file = in_policy_file
         self.out_policy_file = out_policy_file
 
         self.random_seed = 1234
+        self.maxiter = 4000
+        self.save_step = 200
         self.learning_rate = 0.001
-        self.tau = 0.001
         self.h1_size = 130
         self.h2_size = 50
         self.replay_type = 'vanilla'
         self.buffer_size = 1000
         self.batch_size = 32
 
-        self.exploration_type = 'e-greedy'  # Boltzman
+        self.exploration_type = 'e-greedy'
         self.training_frequency = 2
         self.epsilon = 1.0
         self.epsilon_start = 1.0
+        self.epsilon_end = 1.0
 
         self.importance_sampling = False
         self.gamma = 1.0
+        self.success_reward = 20
 
         if Settings.config.has_option('general', 'seed'):
             self.random_seed = Settings.config.getint('general', 'seed')
+
+        if Settings.config.has_option('train', 'max_epoch') and \
+                Settings.config.has_option('train', 'batches_per_epoch') and \
+                Settings.config.has_option('train', 'train_batch_size'):
+            max_epoch = Settings.config.getint('train', 'max_epoch')
+            batches_per_epoch = Settings.config.getint('train', 'batches_per_epoch')
+            train_batch_size = Settings.config.getint('train', 'train_batch_size')
+            self.maxiter = max_epoch * batches_per_epoch * train_batch_size
+
+        if Settings.config.has_option('policy', 'save_step'):
+            self.save_step = Settings.config.getint('policy', 'save_step')
+
         if Settings.config.has_option('dqnpolicy', 'learning_rate'):
             self.learning_rate = Settings.config.getfloat('dqnpolicy', 'learning_rate')
-        if Settings.config.has_option('dqnpolicy', 'tau'):
-            self.tau = Settings.config.getfloat('dqnpolicy', 'tau')
         if Settings.config.has_option('dqnpolicy', 'h1_size'):
             self.h1_size = Settings.config.getint('dqnpolicy', 'h1_size')
         if Settings.config.has_option('dqnpolicy', 'h2_size'):
@@ -64,11 +74,24 @@ class A2CPolicy(Policy):
             self.epsilon = Settings.config.getfloat('dqnpolicy', 'epsilon')
         if Settings.config.has_option('dqnpolicy', 'epsilon_start'):
             self.epsilon_start = Settings.config.getfloat('dqnpolicy', 'epsilon_start')
+        if Settings.config.has_option('dqnpolicy', 'epsilon_end'):
+            self.epsilon_end = Settings.config.getfloat('dqnpolicy', 'epsilon_end')
 
         if Settings.config.has_option('dqnpolicy', 'importance_sampling'):
             self.importance_sampling = Settings.config.getboolean('dqnpolicy', 'importance_sampling')
         if Settings.config.has_option('dqnpolicy', 'gamma'):
             self.gamma = Settings.config.getfloat('dqnpolicy', 'gamma')
+
+        if Settings.config.has_option('eval', 'successreward'):
+            self.success_reward = Settings.config.getint('eval', 'successreward')
+
+        np.random.seed(self.random_seed)
+
+        if self.replay_type == 'vanilla':
+            self.episode = ReplayBufferEpisode(self.buffer_size, self.batch_size, self.random_seed)
+
+        self.sample_count = 0
+        self.episode_count = 0
 
         self.state_dim = PolicyUtils.get_state_dim()
         self.action_dim = len(self.actions.action_names)
@@ -80,19 +103,12 @@ class A2CPolicy(Policy):
 
         with self.graph.as_default():
             tf.set_random_seed(self.random_seed)
-            np.random.seed(self.random_seed)
 
-            if self.replay_type == 'vanilla':
-                self.episode = ReplayBufferEpisode(self.buffer_size, self.batch_size, self.random_seed)
-
-            self.sample_count = 0
-            self.episode_count = 0
-
-            self.a2c = A2CNetwork(self.graph, self.sess, self.state_dim, self.action_dim, self.learning_rate, self.tau,
+            self.a2c = A2CNetwork(self.graph, self.sess, self.state_dim, self.action_dim, self.learning_rate,
                                   self.h1_size, self.h2_size, self.learning)
 
-            init = tf.global_variables_initializer()
-            self.sess.run(init)
+            init_op = tf.global_variables_initializer()
+            self.sess.run(init_op)
 
             self.load_policy(self.in_policy_file)
             print 'loaded replay size:', self.episode.size()
@@ -110,10 +126,6 @@ class A2CPolicy(Policy):
         return sys_action
 
     def record(self, reward, weight=None, state=None, action=None):
-        if self.episode is None:
-            if self.replay_type == 'vanilla':
-                self.episode = ReplayBufferEpisode(self.buffer_size, self.batch_size, self.random_seed)
-
         if self.act_to_be_recorded is None:
             self.act_to_be_recorded = self.summary_act
 
@@ -124,9 +136,8 @@ class A2CPolicy(Policy):
 
         c_state, c_action = self.convert_state_action(state, action)
 
-        # TODO:: it is need?
         # normalising total return to -1~1
-        reward /= 20.0
+        reward /= float(self.success_reward)
 
         value = self.a2c.predict_value([c_state])
         policy_mu = self.mu_prob
@@ -143,9 +154,8 @@ class A2CPolicy(Policy):
             print 'Error!! A2C Episode is not initialized!!'
             return
 
-        # TODO:: it is need?
         # normalising total return to -1~1
-        reward /= 20.0
+        reward /= float(self.success_reward)
 
         terminal_state, terminal_action = self.convert_state_action(TerminalState(), TerminalAction())
         value = 0.0     # not effect on experience replay
@@ -194,22 +204,29 @@ class A2CPolicy(Policy):
         return master_act, next_action_idx
 
     def restart(self):
+        self.summary_act = None
         self.last_system_action = None
         self.prev_belief = None
         self.act_to_be_recorded = None
-        self.summary_act = None
-        self.epsilon = self.epsilon_start
+        if self.maxiter:
+            self.epsilon = self.epsilon_start - (self.epsilon_start - self.epsilon_end) * \
+                float(self.episode_count) / float(self.maxiter)
+        else:
+            self.epsilon = self.epsilon_start
 
     def save_policy(self):
-        if self.learning:
-            self.a2c.save_network(self.out_policy_file+'.a2c')
+        pass
+
+    def save_policy_inc(self):
+        if self.episode_count % self.save_step == 0:
+            self.a2c.save_network(self.out_policy_file+'.a2c.ckpt')
             f = open(self.out_policy_file + '.episode', 'wb')
             for obj in [self.sample_count, self.episode]:
                 pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
             f.close()
 
     def load_policy(self, filename):
-        self.a2c.load_network(filename + '.a2c')
+        self.a2c.load_network(filename + '.a2c.ckpt')
         try:
             f = open(filename + '.episode', 'rb')
             loaded_objects = []
@@ -225,6 +242,9 @@ class A2CPolicy(Policy):
         """
         Call this function when the episode ends
         """
+        if not self.learning:
+            return
+
         self.episode_count += 1
 
         if self.sample_count >= self.batch_size * 3 and self.episode_count % self.training_frequency == 0:
@@ -262,6 +282,7 @@ class A2CPolicy(Policy):
             value_loss, policy_loss, entropy, all_loss, optimise = \
                 self.a2c.train(np.concatenate(np.array(s_batch), axis=0).tolist(), a_batch_one_hot,
                                discounted_r_batch, advantage_batch, weights, rho_forward)
+        self.save_policy_inc()
 
     def _weights_importance_sampling(self, mu_policy, s_batch, a_batch, r_batch):
         """
@@ -278,7 +299,6 @@ class A2CPolicy(Policy):
         :param r_batch:
         :return:
         """
-
         mu_policy = np.asarray(mu_policy)
         mu_cum = []
         lengths = []  # to properly divde on dialogues pi_policy later on
@@ -388,10 +408,8 @@ class A2CPolicy(Policy):
         :param v_episode:
         :return:
         """
-
         bootstrap_value = 0.0
         v_episode_plus = np.asarray(v_episode + [bootstrap_value])
-        # change sth here
         advantage = r_episode + self.gamma * v_episode_plus[1:] - v_episode_plus[:-1]
         advantage = PolicyUtils.discount(advantage, self.gamma)
 

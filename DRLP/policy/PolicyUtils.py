@@ -37,6 +37,7 @@ def extract_simple_belief(belief_state, replace=None):
                 if replace is not None and len(replace) > 0:
                     cur_slot = replace[cur_slot]
                 _bstate['hist_' + cur_slot] = _extract_single_value(belief_state[elem][slot])
+
         elif elem == 'user_intent':
             for slot in belief_state[elem]:
                 _bstate['intent_' + slot] = _extract_single_value(belief_state[elem][slot])

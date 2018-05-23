@@ -46,7 +46,6 @@ class SummaryAction(object):
                         self.action_names.append("confreq_" + slot + "_" + slot2)
 
             self.action_names += ["inform",
-                                  "inform_byname",
                                   'inform_alternatives']
 
     # MASK OVER SUMMARY ACTION SET
@@ -83,17 +82,6 @@ class SummaryAction(object):
                 count_accepted = len(SummaryUtils.getTopBeliefs(belief_state))
                 if count_accepted < self.inform_count_accepted:
                     mask_action = True
-                if mask_action and self.inform_mask:
-                    nonexec.append(action)
-
-            elif action == "inform_byname":
-                if len(belief_state['name']) < 1:
-                    mask_action = True
-                else:   # name is inconsistent with constraints
-                    name = belief_state['name'][-1]
-                    result = [ent for ent in entities if ent['name'] == name]
-                    if len(result) == 0:
-                        mask_action = True
                 if mask_action and self.inform_mask:
                     nonexec.append(action)
 
@@ -156,9 +144,7 @@ class SummaryAction(object):
         elif "confreq_" in action:
             output = self.getConfReq(action.split("_")[1], action.split("_")[2])
         elif action == "inform":
-            output = self.getInformByConstraints(belief_state, entities)
-        elif action == "inform_byname":
-            output = self.getInformByName(belief_state, entities)
+            output = self.getInform(belief_state, entities)
         elif action == "inform_alternatives":
             output = self.getInformAlternatives(belief_state, entities)
         else:
@@ -180,20 +166,18 @@ class SummaryAction(object):
         top_value = summary['TOPHYPS'][0][0]
         return 'confreq({}="{}",{})'.format(cslot, top_value, rslot)
 
-    def getInformByConstraints(self, belief_state, entities):
-        accepted_values = SummaryUtils.getTopBeliefs(belief_state)
-        constraints = SummaryUtils.getConstraints(accepted_values)
-        return SummaryUtils.getInformByConstraints(constraints, entities)
-
-    def getInformByName(self, belief_state, entities):
+    def getInform(self, belief_state, entities):
         requested_slots = SummaryUtils.getRequestedSlots(belief_state)
         accepted_values = SummaryUtils.getTopBeliefs(belief_state)
         constraints = SummaryUtils.getConstraints(accepted_values)
-        if len(belief_state['name']):
-            name = belief_state['name'][-1]
-        else:
-            name = None
-        return SummaryUtils.getInformRequestedSlots(requested_slots, name, constraints, entities)
+        if len(requested_slots):
+            if len(belief_state['name']):
+                name = belief_state['name'][-1]
+            else:
+                name = None
+            return SummaryUtils.getInformRequestedSlots(requested_slots, name, constraints, entities)
+
+        return SummaryUtils.getInformByConstraints(constraints, entities)
 
     def getInformAlternatives(self, belief_state, entities):
         recommended_list = belief_state['name']

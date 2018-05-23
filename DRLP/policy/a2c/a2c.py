@@ -6,13 +6,12 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 class A2CNetwork(object):
 
-    def __init__(self, graph, sess, state_dim, action_dim, learning_rate, tau, h1_size=130, h2_size=50, learning=True):
+    def __init__(self, graph, sess, state_dim, action_dim, learning_rate, h1_size=130, h2_size=50, learning=True):
         self.graph = graph
         self.sess = sess
         self.s_dim = state_dim
         self.a_dim = action_dim
         self.learning_rate = learning_rate
-        self.tau = tau
         self.h1_size = h1_size
         self.h2_size = h2_size
         self.learning = learning
@@ -20,33 +19,33 @@ class A2CNetwork(object):
         self.inputs  = tf.placeholder(tf.float32, [None, self.s_dim])
         self.actions = tf.placeholder(tf.float32, [None, self.a_dim])
 
-        W_fc1 = tf.Variable(tf.truncated_normal([self.s_dim, self.h1_size], stddev=0.01))
-        b_fc1 = tf.Variable(tf.zeros([self.h1_size]))
+        W_fc1 = tf.Variable(tf.truncated_normal([self.s_dim, self.h1_size], stddev=0.01), name='a2c_W_fc1')
+        b_fc1 = tf.Variable(tf.zeros([self.h1_size]), name='a2c_b_fc1')
         h_fc1 = tf.nn.relu6(tf.matmul(self.inputs, W_fc1) + b_fc1)
 
         if self.h2_size > 0:
             # value function
-            W_value = tf.Variable(tf.truncated_normal([self.h1_size, self.h2_size], stddev=0.01))
-            b_value = tf.Variable(tf.zeros([self.h2_size]))
+            W_value = tf.Variable(tf.truncated_normal([self.h1_size, self.h2_size], stddev=0.01), name='a2c_W_value_1')
+            b_value = tf.Variable(tf.zeros([self.h2_size]), name='a2c_b_value_1')
             h_value = tf.nn.relu6(tf.matmul(h_fc1, W_value) + b_value)
 
-            W_value = tf.Variable(tf.truncated_normal([self.h2_size, 1], stddev=0.01))
-            b_value = tf.Variable(tf.zeros([1]))
+            W_value = tf.Variable(tf.truncated_normal([self.h2_size, 1], stddev=0.01), name='a2c_W_value_2')
+            b_value = tf.Variable(tf.zeros([1]), name='a2c_b_value2')
             self.value = tf.matmul(h_value, W_value) + b_value
 
             # policy function
-            W_policy = tf.Variable(tf.truncated_normal([self.h1_size, self.h2_size], stddev=0.01))
-            b_policy = tf.Variable(tf.zeros([self.h2_size]))
+            W_policy = tf.Variable(tf.truncated_normal([self.h1_size, self.h2_size], stddev=0.01), name='a2c_W_policy_1')
+            b_policy = tf.Variable(tf.zeros([self.h2_size]), name='a2c_b_policy_1')
             h_policy = tf.nn.relu6(tf.matmul(h_fc1, W_policy) + b_policy)
 
-            W_policy = tf.Variable(tf.truncated_normal([self.h2_size, self.a_dim], stddev=0.01))
-            b_policy = tf.Variable(tf.zeros([self.a_dim]))
+            W_policy = tf.Variable(tf.truncated_normal([self.h2_size, self.a_dim], stddev=0.01), name='a2c_W_policy_2')
+            b_policy = tf.Variable(tf.zeros([self.a_dim]), name='a2c_b_policy2')
             self.policy = tf.nn.softmax(tf.matmul(h_policy, W_policy) + b_policy) + 0.00001
 
         else:   # 1 hidden layer
             # value function
-            W_value = tf.Variable(tf.truncated_normal([self.h1_size, 1], stddev=0.01))
-            b_value = tf.Variable(tf.zeros([1]))
+            W_value = tf.Variable(tf.truncated_normal([self.h1_size, 1], stddev=0.01), name='a2c_W_value_3')
+            b_value = tf.Variable(tf.zeros([1]), name='a2c_b_value_3')
             self.value = tf.matmul(h_fc1, W_value) + b_value
 
             # policy function
@@ -94,7 +93,7 @@ class A2CNetwork(object):
         # Supervised Learning
         #######################################
         self.policy_y = tf.placeholder(tf.int64, [None])
-        self.policy_y_one_hot = tf.one_hot(self.policy_y, self.a_dim, 1.0, 0.0, name='policy_y_one_hot')
+        self.policy_y_one_hot = tf.one_hot(self.policy_y, self.a_dim, 1.0, 0.0, name='a2c_policy_y_one_hot')
 
         self.loss_sl = tf.reduce_mean(
             tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.policy, labels=self.policy_y_one_hot))

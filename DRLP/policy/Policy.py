@@ -6,12 +6,13 @@ from DRLP.utils import Settings
 class Policy(object):
 
     def __init__(self, learning=False, empty=False):
+        self.summary_act = None     # action id for drl policy
         self.prev_belief = None
         self.act_to_be_recorded = None
         self.last_system_action = None  # accessed from outside of policy
 
         self.learning = learning
-        self.start_with_hello = True
+        self.start_with_hello = False
         self.useconfreq = False
 
         if Settings.config.has_option('policy', 'startwithhello'):
@@ -93,9 +94,18 @@ class Policy(object):
             self.episode = Episode()
         terminal_state, terminal_action = self.convert_state_action(TerminalState(), TerminalAction())
         self.episode.record(state=terminal_state, action=terminal_action, reward=reward)
-        return
 
     def convert_state_action(self, state, action):
+        """
+        Converts the given state and action to policy-specific representations.
+
+        By default, the generic classes :class:`~State` and :class:`~Action` are used. To change this, override method in sub-class.
+
+        :param state: the state to be encapsulated
+        :type state: anything
+        :param action: the action to be encapsulated
+        :type: action: anything
+        """
         return State(state), Action(action)
 
     #########################################################
@@ -142,6 +152,7 @@ class Policy(object):
 
         This method is automatically executed by the agent at the end/beginning of each dialogue.
         """
+        self.summary_act = None
         self.last_system_action = None
         self.prev_belief = None
         self.act_to_be_recorded = None

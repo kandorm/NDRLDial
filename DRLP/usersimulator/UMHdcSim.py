@@ -186,14 +186,14 @@ class UMHdcSim(object):
                                     'NullResp': 0.0,
                                     'OverruleCorrection': 0.1,
                                     'ConfirmRandomConstr': 0.1,
-                                    'ReqAltsAfterVenRec1': 1.0,
+                                    'ReqAltsAfterVenRec1': 0.143,
                                     'ReqAltsAfterVenRec2': 0.143,
                                     'NewRequestResp1': 0.2,
                                     'NewRequestResp2': 0.2,
                                     'CorrectingAct1': 0.45,
                                     'CorrectingAct2': 0.4,
-                                    'ThankAck1': 0.1,
-                                    'ThankAck2': 0.1,
+                                    'ThankAck1': 0.0,
+                                    'ThankAck2': 0.0,
                                     'AffirmCombination': 1.0}
 
         self.receive_options = {'badact': self._receive_badact,

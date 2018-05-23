@@ -64,7 +64,7 @@ class DRLP(object):
             print '========================================================================\n'
 
             for batch_id in range(self.batches_per_epoch):
-                print '\n========= Training iteration=', batch_id, '/', self.batches_per_epoch, 'num-dialogs=', \
+                print '\n========= Training iteration=', batch_id + 1, '/', self.batches_per_epoch, 'num-dialogs=', \
                     self.train_batch_size, '=========\n'
                 self.train_batch()
                 if self.eval_per_batch:
