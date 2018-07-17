@@ -22,6 +22,7 @@ class SummaryAction(object):
         self.has_control = False
         self.has_request = True
         self.has_confirm = True
+        self.has_alter = True
 
         if Settings.config.has_option("summaryacts", "informmask"):
             self.inform_mask = Settings.config.getboolean('summaryacts', 'informmask')
@@ -35,18 +36,25 @@ class SummaryAction(object):
             self.has_request = Settings.config.getboolean('summaryacts', 'has_request')
         if Settings.config.has_option("summaryacts", "has_confirm"):
             self.has_confirm = Settings.config.getboolean('summaryacts', 'has_confirm')
+        if Settings.config.has_option("summaryacts", "has_alter"):
+            self.has_alter = Settings.config.getboolean('summaryacts', 'has_alter')
 
         if not empty:
             slots = Ontology.global_ontology.get_system_requestable_slots()
             for slot in slots:
-                self.action_names.append("request_" + slot)
-                self.action_names.append("confirm_" + slot)
+                if self.has_request:
+                    self.action_names.append("request_" + slot)
+                if self.has_confirm:
+                    self.action_names.append("confirm_" + slot)
                 if confreq:
                     for slot2 in slots:
                         self.action_names.append("confreq_" + slot + "_" + slot2)
 
             self.action_names += ["inform",
-                                  'inform_alternatives']
+                                  'inform_byname']
+
+            if self.has_alter:
+                self.action_names += ['inform_alternatives']
 
     # MASK OVER SUMMARY ACTION SET
     # ------------------------------------------------------------------------------------
@@ -60,16 +68,6 @@ class SummaryAction(object):
         """
         nonexec = []
 
-        if not self.has_request:
-            slots = Ontology.global_ontology.get_system_requestable_slots()
-            for slot in slots:
-                nonexec.append("request_" + slot)
-
-        if not self.has_confirm:
-            slots = Ontology.global_ontology.get_system_requestable_slots()
-            for slot in slots:
-                nonexec.append("confirm_" + slot)
-
         if not self.has_control:
             return nonexec
 
@@ -81,6 +79,12 @@ class SummaryAction(object):
             if action == "inform":
                 count_accepted = len(SummaryUtils.getTopBeliefs(belief_state))
                 if count_accepted < self.inform_count_accepted:
+                    mask_action = True
+                if mask_action and self.inform_mask:
+                    nonexec.append(action)
+
+            elif action == "inform_byname":
+                if not len(belief_state['name']):
                     mask_action = True
                 if mask_action and self.inform_mask:
                     nonexec.append(action)
@@ -144,7 +148,9 @@ class SummaryAction(object):
         elif "confreq_" in action:
             output = self.getConfReq(action.split("_")[1], action.split("_")[2])
         elif action == "inform":
-            output = self.getInform(belief_state, entities)
+            output = self.getInformByConstraints(belief_state, entities)
+        elif action == "inform_byname":
+            output = self.getInformByName(belief_state, entities)
         elif action == "inform_alternatives":
             output = self.getInformAlternatives(belief_state, entities)
         else:
@@ -165,6 +171,21 @@ class SummaryAction(object):
         summary = self._array_slot_summary[cslot]
         top_value = summary['TOPHYPS'][0][0]
         return 'confreq({}="{}",{})'.format(cslot, top_value, rslot)
+
+    def getInformByConstraints(self, belief_state, entities):
+        accepted_values = SummaryUtils.getTopBeliefs(belief_state)
+        constraints = SummaryUtils.getConstraints(accepted_values)
+        return SummaryUtils.getInformByConstraints(constraints, entities)
+
+    def getInformByName(self, belief_state, entities):
+        requested_slots = SummaryUtils.getRequestedSlots(belief_state)
+        accepted_values = SummaryUtils.getTopBeliefs(belief_state)
+        constraints = SummaryUtils.getConstraints(accepted_values)
+        if len(belief_state['name']):
+            name = belief_state['name'][-1]
+        else:
+            name = None
+        return SummaryUtils.getInformRequestedSlots(requested_slots, name, constraints, entities)
 
     def getInform(self, belief_state, entities):
         requested_slots = SummaryUtils.getRequestedSlots(belief_state)

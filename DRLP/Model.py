@@ -42,7 +42,7 @@ class DRLP(object):
         if Settings.config.has_option('policy', 'policytype'):
             self.policy_type = Settings.config.get('policy', 'policytype')
 
-        self.policy_manager = PolicyManager()
+        self.policy_manager = None
 
     def train_policy(self):
         # Just for training
@@ -73,10 +73,21 @@ class DRLP(object):
             self.eval_policy()
 
     def act_on(self, belief_state, entities):
-        return self.policy_manager.act_on(belief_state,entities)
+        Settings.config.set("policy", "learning", 'False')
+        Settings.config.set("policy", "startwithhello", "False")
+        Settings.config.set("summaryacts", "has_control", "False")
+        if self.policy_type == "gp":
+            Settings.config.set("gpsarsa", "scale", "1")
+
+        if not self.policy_manager:
+            self.policy_manager = PolicyManager()
+
+        return self.policy_manager.act_on(belief_state, entities)
 
     def eval_policy(self):
         Settings.config.set("policy", "learning", 'False')
+        Settings.config.set("policy", "startwithhello", "True")
+        Settings.config.set("summaryacts", "has_control", "False")
         if self.policy_type == "gp":
             Settings.config.set("gpsarsa", "scale", "1")
 
@@ -85,6 +96,8 @@ class DRLP(object):
 
     def train_batch(self):
         Settings.config.set("policy", "learning", 'True')
+        Settings.config.set("policy", "startwithhello", "True")
+        Settings.config.set("summaryacts", "has_control", "True")
         if self.policy_type == "gp":
             Settings.config.set("gpsarsa", "scale", "3")
 

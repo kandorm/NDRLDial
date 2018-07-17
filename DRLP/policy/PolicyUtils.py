@@ -42,8 +42,15 @@ def extract_simple_belief(belief_state, replace=None):
             for slot in belief_state[elem]:
                 _bstate['intent_' + slot] = _extract_single_value(belief_state[elem][slot])
 
+        elif elem == 'entity':
+            entity_count = int(belief_state[elem])
+            _bstate['entity_count_feature'] = _extract_count_feature(entity_count)
+            pass
+
         else:
             if elem == 'name':
+                #name_count = len(belief_state[elem])
+                #_bstate['name_count_feature'] = _extract_count_feature(name_count)
                 pass
             else:
                 cur_slot = elem
@@ -59,6 +66,17 @@ def extract_simple_belief(belief_state, replace=None):
                          str(len(_bstate['goal_' + cur_slot])) + ' in ontology ' +
                          str(Ontology.global_ontology.get_length_informable_slot(elem) + num_additional_slot))
     return _bstate
+
+
+def _extract_count_feature(entity_count):
+    dummy = [0. for x in range(6)]
+    if entity_count <= 3:
+        dummy[entity_count] = 1.
+    elif entity_count <= 5:
+        dummy[-2] = 1.
+    else:
+        dummy[-1] = 1.
+    return dummy
 
 
 def _extract_single_value(val):
@@ -105,6 +123,10 @@ def get_state_dim():
     dim += Ontology.global_ontology.get_length_requestable_slots() * 2
 
     dim += Ontology.global_ontology.get_length_user_intent() * 2
+
+    dim += 6
+
+    #dim += 6
 
     return dim
 

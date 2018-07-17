@@ -165,7 +165,7 @@ class UMHdcSim(object):
 
         # DEFAULTS:
         self.answer_req_always = True
-        self.use_new_goal_scenarios = True
+        self.use_new_goal_scenarios = False
         self.sampleDecisiconProbs = False
         self.patience_old_style = False
         self.old_style_parameter_sampling = True
@@ -209,6 +209,9 @@ class UMHdcSim(object):
                                 'bye': self._receive_bye,
                                 'affirm': self._receive_affirm,
                                 'negate': self._receive_negate}
+
+        if Settings.config.has_option('usermodel', 'usenewgoalscenarios'):
+            self.use_new_goal_scenarios = Settings.config.getboolean('usermodel', 'usenewgoalscenarios')
 
         self.agenda = UMAgenda()
         self.last_user_act = None

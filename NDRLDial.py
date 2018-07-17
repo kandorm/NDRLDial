@@ -45,121 +45,32 @@ class NDRLDial(object):
 
     def test(self):
 
-        print '\n===============  Test Model  =======================\n'
-
-        stats = {'vmc': 0.0, 'success': 0.0, 'turn_size': 0.0, 'belief_match': 0.0}
-        log = {'stats': {}, 'result': []}
-
-        for idx, dial in enumerate(self.corpus):
-
-            print idx, '/', len(self.corpus)
-
-            transcripts, goal, finished = dial
-
-            constraint = copy.deepcopy(goal)
-            del constraint['request']
-
-            venue_name = ''
-            venue_has_find = False
-            turn = 0
-            req = []
-            belief_request = []
-
-            # for log
-            c_log = {'dial': [], 'goal': goal, 'finished': finished, 'venue': '',
-                     'vmc': 0.0, 'success': 0.0, 'turn_size': 0.0, 'belief_match': 0.0}
-
-            # param for dialogue continue
-            belief_state = {}
-            last_sys_act = ''
-            for user_utt in transcripts:
-                turn += 1
-                response = self.reply(user_utt, last_sys_act, belief_state)
-                belief_state = response['belief_state']
-                last_sys_act = response['last_sys_act']
-
-                sys_act = DiaAct(last_sys_act)
-                if sys_act.act == 'inform':
-                    for item in sys_act.items:
-                        if item.slot == 'name' and item.op == '=' and item.val not in ['none', 'dontcare', None]:
-                            venue_name = item.val
-                            if not venue_has_find:
-                                constraint['name'] = venue_name
-                                entities = self.kb_manager.entity_by_features(constraint)
-                                if len(entities) > 0:
-                                    stats['turn_size'] += turn
-                                    c_log['turn_size'] += turn
-
-                        if item.slot in self.requestable_slots:
-                            req.append(item.slot)
-
-                belief_request.extend(belief_state['request'])
-
-                c_log['dial'].append({'user_transcript': user_utt,
-                                      'belief_state': str(SummaryUtils.getTopBeliefs(belief_state)),
-                                      'request': str(SummaryUtils.getRequestedSlots(belief_state)),
-                                      'sys_act': str(sys_act)})
-
-            #################################################################
-            # Test belief state match
-            belief_state = SummaryUtils.getTopBeliefs(belief_state)
-            b_match = True
-            for slot in goal.keys():
-                if slot == 'request':
-                    if set(goal[slot]) & set(belief_request) != set(goal[slot]):
-                        b_match = False
-                else:
-                    try:
-                        if goal[slot] != belief_state[slot][0]:
-                            b_match = False
-                    except KeyError:
-                        b_match = False
-            if b_match:
-                c_log['belief_match'] += 1.0
-                stats['belief_match'] += 1.0
-            #################################################################
-
-            c_log['venue'] = venue_name
-            if not venue_has_find:
-                stats['turn_size'] += turn
-                c_log['turn_size'] += turn
-
-            if venue_name and finished:
-                constraint['name'] = venue_name
-                entities = self.kb_manager.entity_by_features(constraint)
-                if len(entities) > 0:
-                    stats['vmc'] += 1
-                    c_log['vmc'] += 1
-                    if set(req) & set(goal['request']) == set(goal['request']):
-                        stats['success'] += 1
-                        c_log['success'] += 1
-
-            log['result'].append(c_log)
-
-        print 'Venue Match Rate  : %.1f%%' % (100 * stats['vmc'] / float(len(self.corpus)))
-        print 'Task Success Rate : %.1f%%' % (100 * stats['success'] / float(len(self.corpus)))
-        print 'Average Turn Size : %.1f' % (stats['turn_size'] / float(len(self.corpus)))
-        print 'Belief state match: %.1f%%' % (100 * stats['belief_match'] / float(len(self.corpus)))
-
-        log['stats']['vmc'] = str(round(100 * stats['vmc'] / float(len(self.corpus)), 2))
-        log['stats']['success'] = str(round(100 * stats['success'] / float(len(self.corpus)), 2))
-        log['stats']['turn_size'] = str(round(stats['turn_size'] / float(len(self.corpus)), 2))
-        log['stats']['belief_match'] = str(round(100 * stats['belief_match'] / float(len(self.corpus)), 2))
-
-        json.dump(log, open(self.result_file, "w"), indent=2)
-
-    def test_alter(self):
-
         print '\n===============  Test Alter  =======================\n'
 
         # statistical data for all dial
-        stats = {'vmc': 0.0, 'success': 0.0, 'turn_size': 0.0, 'belief_match': 0.0, 'alter': 0.0}
-        log = {'stats': {}, 'result': []}
+        stats = {
+            'informable': {
+                'food': [10e-9, 10e-4, 10e-4, 10e-4],
+                'pricerange': [10e-9, 10e-4, 10e-4, 10e-4],
+                'area': [10e-9, 10e-4, 10e-4, 10e-4],
+            },
+            'requestable': {
+                'food': [10e-9, 10e-4, 10e-4, 10e-4],
+                'pricerange': [10e-9, 10e-4, 10e-4, 10e-4],
+                'area': [10e-9, 10e-4, 10e-4, 10e-4],
+                'phone': [10e-9, 10e-4, 10e-4, 10e-4],
+                'address': [10e-9, 10e-4, 10e-4, 10e-4],
+                'postcode': [10e-9, 10e-4, 10e-4, 10e-4],
+                'name': [10e-9, 10e-4, 10e-4, 10e-4]
+            },
+            'vmc': 0.0, 'success': 0.0, 'turn_size': 0.0, 'alter': 0.0}
+
+        log = {'belief_state': {}, 'stats': {}, 'result': []}
 
         for idx, dial in enumerate(self.corpus):
             print idx, '/', len(self.corpus)
 
-            transcripts, goal, finished = dial
+            transcripts, state, goal, finished = dial
             constraint = copy.deepcopy(goal)
             del constraint['request']
 
@@ -168,17 +79,16 @@ class NDRLDial(object):
             venue_has_find = False
             turn = 0
             req = []
-            belief_request = []
             recommended_list = []
 
             # for log
             c_log = {'dial': [], 'rec_list': [], 'goal': goal, 'finished': finished, 'venue': '',
-                     'vmc': 0.0, 'success': 0.0, 'turn_size': 0.0, 'belief_match': 0.0, 'alter': 0.0}
+                     'vmc': 0.0, 'success': 0.0, 'turn_size': 0.0, 'alter': 0.0}
 
             # param for dialogue continue
             belief_state = {}
             last_sys_act = ''
-            for user_utt in transcripts:
+            for t_id, user_utt in enumerate(transcripts):
                 turn += 1
                 response = self.reply(user_utt, last_sys_act, belief_state)
                 belief_state = response['belief_state']
@@ -201,31 +111,40 @@ class NDRLDial(object):
                         if item.slot in self.requestable_slots:
                             req.append(item.slot)
 
-                belief_request.extend(SummaryUtils.getRequestedSlots(belief_state))
+                c_dial = {'user_transcript': user_utt,
+                          'true_state': str(state[t_id]),
+                          'belief_state': str(SummaryUtils.getTopBeliefs(belief_state)),
+                          'request': str(SummaryUtils.getRequestedSlots(belief_state)),
+                          'sys_act': str(sys_act)}
+                c_log['dial'].append(c_dial)
 
-                c_log['dial'].append({'user_transcript': user_utt,
-                                      'belief_state': str(SummaryUtils.getTopBeliefs(belief_state)),
-                                      'request': str(SummaryUtils.getRequestedSlots(belief_state)),
-                                      'sys_act': str(sys_act)})
+                t_state = state[t_id]
+                for inf_slot in stats['informable']:
+                    top_value, top_prob = SummaryUtils.getTopBelief(belief_state[inf_slot])
+                    if inf_slot in t_state:
+                        if t_state[inf_slot] == top_value:      # true positive
+                            stats['informable'][inf_slot][0] += 1.0
+                        else:                                   # false negative
+                            stats['informable'][inf_slot][1] += 1.0
+                    else:
+                        if top_value == 'none':                 # true negative
+                            stats['informable'][inf_slot][2] += 1.0
+                        else:                                   # false positive
+                            stats['informable'][inf_slot][3] += 1.0
 
-            #################################################################
-            # Test belief state match
-            belief_state = SummaryUtils.getTopBeliefs(belief_state)
-            b_match = True
-            for slot in goal.keys():
-                if slot == 'request':
-                    if set(goal[slot]) & set(belief_request) != set(goal[slot]):
-                        b_match = False
-                else:
-                    try:
-                        if goal[slot] != belief_state[slot][0]:
-                            b_match = False
-                    except KeyError:
-                        b_match = False
-            if b_match:
-                c_log['belief_match'] += 1.0
-                stats['belief_match'] += 1.0
-            #################################################################
+                for req_slot in stats['requestable']:
+                    t_req = t_state['request']
+                    b_req = SummaryUtils.getRequestedSlots(belief_state)
+                    if req_slot in t_req:
+                        if req_slot in b_req:                   # true positive
+                            stats['requestable'][req_slot][0] += 1.0
+                        else:                                   # false negative
+                            stats['requestable'][req_slot][1] += 1.0
+                    else:
+                        if req_slot not in b_req:               # true negative
+                            stats['requestable'][req_slot][2] += 1.0
+                        else:                                   # false positive
+                            stats['requestable'][req_slot][3] += 1.0
 
             #################################################################
             # Test recommend more than one restaurant
@@ -253,8 +172,68 @@ class NDRLDial(object):
 
             log['result'].append(c_log)
 
+        #################################################################
+        # Compute req/inf pre recall ac
+        quota = ['precision', 'recall', 'F-1', 'accuracy']
+        inf_slots = ['food', 'pricerange', 'area']
+        req_slots = ['food', 'pricerange', 'area', 'phone', 'address', 'postcode', 'name']
+        stat_result = {'informable': {}, 'requestable': {}}
+        for inf_slot in inf_slots:
+            stat_result['informable'][inf_slot] = {}
+            for c_q in quota:
+                stat_result['informable'][inf_slot][c_q] = None
+        stat_result['informable']['joint'] = {}
+
+        for req_slot in req_slots:
+            stat_result['requestable'][req_slot] = {}
+            for c_q in quota:
+                stat_result['requestable'][req_slot][c_q] = None
+        stat_result['requestable']['joint'] = {}
+
+        joint = [0.0 for x in range(4)]
+        for s in inf_slots:
+            joint = [joint[i] + stats['informable'][s][i] for i in range(len(joint))]
+            tp, fn, tn, fp = stats['informable'][s]
+            p = tp / (tp + fp)
+            r = tp / (tp + fn)
+            ac = (tp + tn) / (tp + tn + fp + fn)
+            stat_result['informable'][s]['precision'] = round(p, 4)
+            stat_result['informable'][s]['recall'] = round(r, 4)
+            stat_result['informable'][s]['F-1'] = round(2 * p * r / (p + r), 4)
+            stat_result['informable'][s]['accuracy'] = round(ac, 4)
+        tp, fn, tn, fp = joint
+        p = tp / (tp + fp)
+        r = tp / (tp + fn)
+        ac = (tp + tn) / (tp + tn + fp + fn)
+        stat_result['informable']['joint']['precision'] = round(p, 4)
+        stat_result['informable']['joint']['recall'] = round(r, 4)
+        stat_result['informable']['joint']['F-1'] = round(2 * p * r / (p + r), 4)
+        stat_result['informable']['joint']['accuracy'] = round(ac, 4)
+
+        joint = [0.0 for x in range(4)]
+        for s in req_slots:
+            joint = [joint[i] + stats['requestable'][s][i] for i in range(len(joint))]
+            tp, fn, tn, fp = stats['requestable'][s]
+            p = tp / (tp + fp)
+            r = tp / (tp + fn)
+            ac = (tp + tn) / (tp + tn + fp + fn)
+            stat_result['requestable'][s]['precision'] = round(p, 4)
+            stat_result['requestable'][s]['recall'] = round(r, 4)
+            stat_result['requestable'][s]['F-1'] = round(2 * p * r / (p + r), 4)
+            stat_result['requestable'][s]['accuracy'] = round(ac, 4)
+        tp, fn, tn, fp = joint
+        p = tp / (tp + fp)
+        r = tp / (tp + fn)
+        ac = (tp + tn) / (tp + tn + fp + fn)
+        stat_result['requestable']['joint']['precision'] = round(p, 4)
+        stat_result['requestable']['joint']['recall'] = round(r, 4)
+        stat_result['requestable']['joint']['F-1'] = round(2 * p * r / (p + r), 4)
+        stat_result['requestable']['joint']['accuracy'] = round(ac, 4)
+
+        log['belief_state'] = stat_result
+        #################################################################
+
         print 'Average Turn Size : %.1f' % (stats['turn_size'] / float(len(self.corpus)))
-        print 'Belief state match: %.1f%%' % (100 * stats['belief_match'] / float(len(self.corpus)))
         print 'Venue Match Rate  : %.1f%%' % (100 * stats['vmc'] / float(len(self.corpus)))
         print 'Task Success Rate : %.1f%%' % (100 * stats['success'] / float(len(self.corpus)))
         print 'Recommend one more: %.1f%%' % (100 * stats['alter'] / float(len(self.corpus)))
@@ -262,7 +241,6 @@ class NDRLDial(object):
         log['stats']['vmc'] = str(round(100 * stats['vmc'] / float(len(self.corpus)), 2))
         log['stats']['success'] = str(round(100 * stats['success'] / float(len(self.corpus)), 2))
         log['stats']['turn_size'] = str(round(stats['turn_size'] / float(len(self.corpus)), 2))
-        log['stats']['belief_match'] = str(round(100 * stats['belief_match'] / float(len(self.corpus)), 2))
         log['stats']['alter'] = str(round(100 * stats['alter'] / float(len(self.corpus)), 2))
 
         json.dump(log, open(self.result_file, "w"), indent=2)
@@ -310,6 +288,8 @@ class NDRLDial(object):
         for slot in intent_predicted:
             if slot in distribution_dict['user_intent']:
                 distribution_dict['user_intent'][slot] = intent_predicted[slot]
+
+        distribution_dict['entity'] = len(entities)
 
         # 4. Policy -- Determine system act/response type: DiaAct
         sys_act = self.policy_manager.act_on(distribution_dict, entities)

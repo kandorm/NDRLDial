@@ -67,6 +67,8 @@ class DialogueAgent(object):
         # 3. Add recommended list into belief state
         belief_state['name'] = self.recommended_list
 
+        belief_state['entity'] = len(entities)
+
         # 4. Policy -- Determine system act/response
         sys_act = self.policy_manager.act_on(belief_state, entities)
 
@@ -114,6 +116,8 @@ class DialogueAgent(object):
 
         # 3. Add recommended list into belief state
         belief_state['name'] = self.recommended_list
+
+        belief_state['entity'] = len(entities)
 
         # 4. Policy -- Determine system act/response type: DiaAct
         sys_act = self.policy_manager.act_on(belief_state, entities)

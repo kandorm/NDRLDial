@@ -1,0 +1,8 @@
+Successfully loaded: DRLP/model/a2c/a2c.a2c.ckpt
+loaded replay size: 1000
+evaluated by:: ObjectiveSuccessEvaluator
+# of dialogues  = 500
+Average reward  = 17.52 +- 0.97
+Average success = 92.20 +- 2.36
+Average turns   = 5.07 +- 0.20
+

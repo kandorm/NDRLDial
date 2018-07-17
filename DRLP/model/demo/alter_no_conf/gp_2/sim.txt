@@ -1,0 +1,6 @@
+evaluated by:: ObjectiveSuccessEvaluator
+# of dialogues  = 100
+Average reward  = 17.52 +- 2.62
+Average success = 92.00 +- 5.38
+Average turns   = 5.04 +- 0.63
+
