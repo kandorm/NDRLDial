@@ -11,6 +11,8 @@ NBT.py - Main script to train and test Neural Belief Tracker.
 
 import sys
 import json
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
 
 sys.path.insert(0, '.')
 from NBT.utils.commandparser import NBTOptParser

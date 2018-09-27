@@ -1,3 +1,4 @@
 *.pyc
 .idea/
 small-paragram.txt
+.vscode/

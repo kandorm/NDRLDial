@@ -71,5 +71,5 @@ def load_word_vectors(file_destination, primary_language="english"):
 
 def download_word_vectors(file_path):
     print "Vectors not there, downloading small Paragram and putting it there."
-    os.system("wget https://mi.eng.cam.ac.uk/~nm480/prefix_paragram.txt")
+    os.system("wget -O prefix_paragram.txt https://www.dropbox.com/s/r35ih722bbjpn8b/prefix_paragram.txt?dl=0")
     os.system("mv prefix_paragram.txt " + file_path)

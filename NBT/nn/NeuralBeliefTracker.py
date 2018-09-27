@@ -244,7 +244,7 @@ def NeuralBeliefTracker(vector_dimension, label_count,
 
     # ======================== LOSS IS JUST CROSS ENTROPY ==========================================
     if use_softmax:
-        cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(logits=y_combine, labels=y_)
+        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=y_combine, labels=y_)
     else:
         cross_entropy = tf.reduce_sum(tf.square(y - y_))
 
