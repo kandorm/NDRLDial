@@ -96,7 +96,7 @@ class A2CNetwork(object):
         self.policy_y_one_hot = tf.one_hot(self.policy_y, self.a_dim, 1.0, 0.0, name='a2c_policy_y_one_hot')
 
         self.loss_sl = tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.policy, labels=self.policy_y_one_hot))
+            tf.nn.softmax_cross_entropy_with_logits(logits=self.policy, labels=self.policy_y_one_hot))
 
         self.lossL2 = tf.add_n([tf.nn.l2_loss(v) for v in self.vars
                                 if 'bias' not in v.name]) * 0.001
